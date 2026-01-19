@@ -28,7 +28,10 @@ All commands should be executed via `uv run` to ensure they run in the isolated 
 | **Testing**    | Run Single File      | `uv run pytest tests/test_sequence.py` | useful for focused TDD.               |
 | **Testing**    | Run Specific Case    | `uv run pytest -k "test_name"`         | Filters tests by name.                |
 | **Coverage**   | View Missing         | `uv run coverage report -m`            | See which lines are missing coverage. |
+| **Coverage**   | Generate HTML        | `uv run coverage html`                 | detailed report in `htmlcov/`.        |
 | **Git Hooks**  | Run Pre-commit       | `uv run lefthook run pre-commit`       | Runs all checks locally.              |
+| **Deps**       | Add Package          | `uv add <package>`                     | Adds to pyproject.toml & locks.       |
+| **Deps**       | Remove Package       | `uv remove <package>`                  | Removes from project.                 |
 
 ### The "Golden Loop"
 
@@ -134,10 +137,13 @@ When working in this repository, agents must:
 4. **Self-Correct:** If a build command fails, analyze the error output, fix the code, and re-run the verify step.
 5. **No Hallucinations:** Do not import packages that are not listed in `pyproject.toml` without explicitly adding them to the plan.
 6. **Pathing:** Use absolute paths when using file system tools.
+7. **Scoped Changes:** Focus on the requested task. Do not refactor unrelated code unless it is blocking.
+8. **Dependency Safety:** Always use `uv add` to modify dependencies; never edit `pyproject.toml` manually for packages.
 
 ## 8. Common Pitfalls to Avoid
 
 - **Forgot Type Hint:** Ruff will catch this. Ensure `def func(a: int) -> int:` syntax.
 - **Coverage Drop:** Adding a new `if` condition without a test case that triggers it will cause the build to fail.
 - **Formatting Conflicts:** Do not try to manually format code if it conflicts with `dprint`. Just run `dprint fmt`.
-- **Relative Imports in Tests:** Ensure tests import from the installed package context or set PYTHONPATH correctly (handled by `uv run pytest`).
+- **Relative Imports in Tests:** Ensure tests import from the installed package context.
+- **Lockfile Desync:** If you see errors about dependencies, run `uv sync` to ensure the environment matches `uv.lock`.
