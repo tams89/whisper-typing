@@ -1,26 +1,24 @@
 # Whisper Typing
 
-A powerful, background speech-to-text application for Windows that runs locally. It listens for a global hotkey to record your voice, transcribes it using OpenAI's Whisper model (accelerated with `transformers` and CUDA), and types the result into your active window after your confirmation.
+A powerful, human-like background speech-to-text application for Windows that runs locally. It listens for a global hotkey to record your voice, transcribes it in real-time using `faster-whisper`, and types the result into your active window with natural rhythm and pace.
 
 ## Features
 
+- **Real-Time Transcription**: See your words appear in the preview area instantly as you speak.
+- **Human-like Typing**: Simulates natural typing with variable speed, random jitter, and intelligent pauses after punctuation.
 - **Global Hotkeys**: Control recording and typing from any application.
     - **Record/Stop**: `F8` (default)
     - **Confirm Type**: `F9` (default)
-    - **Improve Text**: `F10` (default) - Uses Gemini AI to fix grammar.
-- **Interactive Modes**: Type `/r` to reload, `/p` to pause, `/c` to change mic, or `/q` to quit.
-- **Preview Mode**: Transcribed text is shown in the console first. You decide when to paste it.
-- **Local Processing**: All audio is processed locally on your machine. No data is sent to the cloud.
-- **Smart Focus**: Automatically refocuses your target window before typing (uses `pygetwindow`).
-- **Clipboard Typing**: Uses Ctrl+V for fast, reliable text insertion (requires `pyperclip`).
-- **GPU Acceleration**: Supports NVIDIA GPUs for lightning-fast transcription (requires CUDA).
-- **Customizable**: Configure hotkeys, model size (e.g., `tiny`, `base`, `large`), and language via command-line arguments.
+    - **Improve Text**: `F10` (default) - Uses Gemini AI to fix grammar and refine text.
+- **Safe Focus**: Automatically stops typing if you switch away from the target window.
+- **Secure Storage**: Sensitive API keys are stored safely in a local `.env` file, not in plain JSON.
+- **TUI Management**: A sleek terminal interface for monitoring logs, previewing text, and configuring settings.
+- **Local Processing**: Audio is processed locally using `faster-whisper` (accelerated with CUDA if available).
 
 ## Prerequisites
 
-- **Python 3.10+**
-- **FFmpeg**: Must be available on your system `PATH` (used for audio processing).
-- **NVIDIA GPU (Recommended)**: For optimal performance. The app will fallback to CPU but it is significantly slower.
+- **Python 3.13+**
+- **NVIDIA GPU (Recommended)**: Supports CUDA for lightning-fast transcription. Fallback to CPU is supported but slower.
 
 ## Installation
 
@@ -45,63 +43,46 @@ Run the application using `uv`:
 uv run whisper-typing
 ```
 
+### TUI Shortcuts
+Inside the application, you can use these keys:
+- **`c`**: Open Configuration screen.
+- **`p`**: Pause/Resume hotkeys.
+- **`r`**: Reload configuration.
+- **`q`**: Quit the application.
+
 ### Workflow
 
-1.  **Start Recording**: Press **F8**. You will see "Recording started..." in the console.
-2.  **Speak**: Say what you want to type.
-3.  **Stop & Transcribe**: Press **F8** again. The audio will be processed.
-4.  **Preview**: The transcribed text will appear in the console:
-    ```
-    [PREVIEW] Transcribed text: "Hello world"
-    Press <f9> to type this text.
-    ```
-5.  **Type**: Switch to your target application (e.g., Notepad, Slack) and press **F9**. The text will be typed out automatically.
+1.  **Start Recording**: Press **F8**. You will see "Recording" in the status bar.
+2.  **Speak**: You will see transcribed text appear in the **Preview Area** in real-time.
+3.  **Stop**: Press **F8** again.
+4.  **Confirm Type**: Switch to your target application (e.g., Notepad, Slack) and press **F9**. The text will be typed out with human-like timing.
+5.  **Improve (Optional)**: Press **F10** before typing to have Gemini AI refine your transcription.
 
 ## Configuration
 
-You can customize the application behavior via CLI arguments or `config.json`.
+You can customize the application via the UI (press `c`) or by editing local files.
 
-### Method 1: Command Line Arguments
-```bash
-# Change hotkeys
-uv run whisper-typing --hotkey "<f7>" --type-hotkey "<f10>"
-
-# Use a larger, more accurate model
-uv run whisper-typing --model openai/whisper-large-v3
-
-# Specify input language
-uv run whisper-typing --language en
+### Secure API Keys
+The Gemini API key is stored in a `.env` file:
+```env
+GEMINI_API_KEY=your_key_here
 ```
 
-### Method 2: JSON Configuration
-Create a `config.json` file in the same directory:
+### JSON Configuration (`config.json`)
+Other settings are stored in `config.json`:
 ```json
 {
     "hotkey": "<f8>",
     "type_hotkey": "<f9>",
     "improve_hotkey": "<f10>",
-    "model": "openai/whisper-base",
-    "language": null,
-    "gemini_api_key": "YOUR_API_KEY_HERE"
+    "model": "openai/whisper-large-v3-turbo",
+    "compute_type": "auto",
+    "device": "cuda",
+    "typing_wpm": 40
 }
 ```
 
-### Priority
-1. Command Line Arguments
-2. `config.json` file
-3. Default values
-
-
-### Supported Models
-Any Hugging Face compatible Whisper model, e.g.:
-- `openai/whisper-tiny`
-- `openai/whisper-base` (Default)
-- `openai/whisper-small`
-- `openai/whisper-medium`
-- `openai/whisper-large-v3`
-
 ## Troubleshooting
 
-- **FFmpeg not found**: Ensure FFmpeg is installed and added to your system Environment Variables.
-- **Audio not recording**: Check your default microphone input settings in Windows.
-- **Slow Transcription**: Ensure `torch` is using your GPU. This app prints the device (cuda/cpu) on startup.
+- **Slow Transcription**: Check the logs to see if "cuda" or "cpu" is being used. You can change this in the Configuration screen.
+- **Hotkeys not working**: Ensure no other application is capturing the same keys.
