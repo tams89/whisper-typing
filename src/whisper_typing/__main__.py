@@ -3,7 +3,8 @@ import json
 import os
 import sys
 import threading
-from typing import Any, Dict
+import time
+from typing import Any, Dict, Optional
 from pynput import keyboard
 from .audio_capture import AudioRecorder
 from .transcriber import Transcriber
@@ -16,7 +17,8 @@ DEFAULT_CONFIG = {
     "improve_hotkey": "<f10>",
     "model": "openai/whisper-base",
     "language": None,
-    "gemini_api_key": ""
+    "gemini_api_key": "",
+    "gemini_prompt": None 
 }
 
 def load_config(config_path: str = "config.json") -> Dict[str, Any]:
@@ -25,145 +27,181 @@ def load_config(config_path: str = "config.json") -> Dict[str, Any]:
         try:
             with open(config_path, "r") as f:
                 user_config = json.load(f)
-                print(f"Loaded config from {config_path}")
                 return user_config
         except Exception as e:
             print(f"Error loading {config_path}: {e}")
     return {}
 
-def main() -> None:
-    """Run the application."""
-    # 1. Load defaults
-    config = DEFAULT_CONFIG.copy()
-    
-    # 2. Load JSON config
-    file_config = load_config()
-    config.update(file_config)
-    
-    # 3. Parse Args (override config if specified)
-    parser = argparse.ArgumentParser(description="Whisper Typing - Background Speech to Text")
-    parser.add_argument("--hotkey", help=f"Global hotkey to toggle recording (default: {config['hotkey']})")
-    parser.add_argument("--type-hotkey", help=f"Global hotkey to type the pending text (default: {config['type_hotkey']})")
-    parser.add_argument("--improve-hotkey", help=f"Global hotkey to improve text with AI (default: {config['improve_hotkey']})")
-    parser.add_argument("--model", help=f"Whisper model ID (default: {config['model']})")
-    parser.add_argument("--language", help=f"Language code (default: {config['language']})")
-    parser.add_argument("--api-key", help="Gemini API Key (overrides config)")
+class WhisperTypingApp:
+    def __init__(self):
+        self.config = {}
+        self.args = None
+        self.recorder = None
+        self.transcriber = None
+        self.typer = None
+        self.improver = None
+        self.listener = None
+        self.is_processing = False
+        self.pending_text = None
+        
+    def load_configuration(self, args):
+        """Load and merge configuration."""
+        self.args = args
+        self.config = DEFAULT_CONFIG.copy()
+        file_config = load_config()
+        self.config.update(file_config)
+        
+        # Override with CLI args
+        if args.hotkey: self.config["hotkey"] = args.hotkey
+        if args.type_hotkey: self.config["type_hotkey"] = args.type_hotkey
+        if args.improve_hotkey: self.config["improve_hotkey"] = args.improve_hotkey
+        if args.model: self.config["model"] = args.model
+        if args.language: self.config["language"] = args.language
+        if args.api_key: self.config["gemini_api_key"] = args.api_key
 
-    args = parser.parse_args()
-    
-    # Update config with CLI args only if provided
-    if args.hotkey: config["hotkey"] = args.hotkey
-    if args.type_hotkey: config["type_hotkey"] = args.type_hotkey
-    if args.improve_hotkey: config["improve_hotkey"] = args.improve_hotkey
-    if args.model: config["model"] = args.model
-    if args.language: config["language"] = args.language
-    if args.api_key: config["gemini_api_key"] = args.api_key
-    
-    print(f"Initializing Whisper Typing...")
-    print(f"Record Hotkey:  {config['hotkey']}")
-    print(f"Type Hotkey:    {config['type_hotkey']}")
-    print(f"Improve Hotkey: {config['improve_hotkey']}")
-    print(f"Model:          {config['model']}")
-    print(f"AI Enabled:     {'Yes' if config['gemini_api_key'] else 'No'}")
-    
-    try:
-        recorder = AudioRecorder()
-        transcriber = Transcriber(model_id=config["model"], language=config["language"])
-        improver = AIImprover(api_key=config["gemini_api_key"])
-        typer = Typer()
-    except Exception as e:
-        print(f"Error initializing components: {e}")
-        return
+    def initialize_components(self):
+        """Initialize or re-initialize components."""
+        print(f"Initializing Whisper Typing...")
+        print(f"Record Hotkey:  {self.config['hotkey']}")
+        print(f"Type Hotkey:    {self.config['type_hotkey']}")
+        print(f"Improve Hotkey: {self.config['improve_hotkey']}")
+        print(f"Model:          {self.config['model']}")
+        print(f"AI Enabled:     {'Yes' if self.config['gemini_api_key'] else 'No'}")
 
-    is_processing = False
-    pending_text = None
+        try:
+            # Re-use transcriber if model is same to save time? 
+            # For simplicity & correctness, we recreate it, unless we want to optimize.
+            # Optimization: Check if model/language changed.
+            if not self.transcriber or self.transcriber.model_id != self.config["model"] or self.transcriber.language != self.config["language"]:
+                 self.transcriber = Transcriber(model_id=self.config["model"], language=self.config["language"])
+            
+            # These are cheap to recreate
+            self.recorder = AudioRecorder()
+            self.typer = Typer()
+            self.improver = AIImprover(api_key=self.config["gemini_api_key"])
+            
+        except Exception as e:
+            print(f"Error initializing components: {e}")
+            return False
+        return True
 
-    def on_record_toggle():
-        nonlocal is_processing, pending_text
-        if is_processing:
+    def start_listener(self):
+        """Setup and start the hotkey listener."""
+        if self.listener:
+            self.listener.stop()
+        
+        try:
+            self.listener = keyboard.GlobalHotKeys({
+                self.config['hotkey']: self.on_record_toggle,
+                self.config['type_hotkey']: self.on_type_confirm,
+                self.config['improve_hotkey']: self.on_improve_text
+            })
+            self.listener.start()
+            print(f"Ready! Press {self.config['hotkey']} to toggle recording.")
+            print("Type '/q' to quit, '/r' to reload config.")
+        except ValueError as e:
+            print(f"Invalid hotkey format: {e}")
+
+    def stop(self):
+        if self.listener:
+            self.listener.stop()
+
+    # --- Callbacks ---
+    def on_record_toggle(self):
+        if self.is_processing:
             print("Still processing previous audio, please wait.")
             return
 
-        if recorder.recording:
-            # Stop recording and process
+        if self.recorder.recording:
             print("\nStopping recording...")
-            audio_path = recorder.stop()
+            audio_path = self.recorder.stop()
             
             if audio_path:
-                is_processing = True
-                
+                self.is_processing = True
                 def process_audio():
-                    nonlocal is_processing, pending_text
                     try:
-                        text = transcriber.transcribe(audio_path)
+                        text = self.transcriber.transcribe(audio_path)
                         if text:
-                            pending_text = text
+                            self.pending_text = text
                             print(f"\n[PREVIEW] Transcribed text: \"{text}\"")
-                            print(f"Actions: Type ({config['type_hotkey']}) | Improve ({config['improve_hotkey']})")
+                            print(f"Actions: Type ({self.config['type_hotkey']}) | Improve ({self.config['improve_hotkey']})")
                         else:
                             print("\n[PREVIEW] No text transcribed.")
                     except Exception as e:
                         print(f"Error during processing: {e}")
                     finally:
-                        is_processing = False
-                        
+                        self.is_processing = False
                 threading.Thread(target=process_audio).start()
             else:
                 print("No audio recorded.")
         else:
-            # Start recording
-            pending_text = None 
-            recorder.start()
+            self.pending_text = None 
+            self.recorder.start()
 
-    def on_type_confirm():
-        nonlocal pending_text
-        if pending_text:
-            typer.type_text(pending_text)
-            pending_text = None # Clear after typing
+    def on_type_confirm(self):
+        if self.pending_text:
+            self.typer.type_text(self.pending_text)
+            self.pending_text = None
             print("\nText typed and cleared.")
         else:
-            print("\nNo pending text to type. Record something first.")
+            print("\nNo pending text to type.")
 
-    def on_improve_text():
-        nonlocal pending_text, is_processing
-        if is_processing:
+    def on_improve_text(self):
+        if self.is_processing:
              print("Please wait, currently processing...")
              return
              
-        if pending_text:
-            is_processing = True
+        if self.pending_text:
+            self.is_processing = True
             def run_improve():
-                nonlocal pending_text, is_processing
                 try:
-                    # Pass the prompt from config
-                    prompt_template = config.get("gemini_prompt")
-                    improved = improver.improve_text(pending_text, prompt_template=prompt_template)
+                    prompt_template = self.config.get("gemini_prompt")
+                    improved = self.improver.improve_text(self.pending_text, prompt_template=prompt_template)
                     if improved:
-                        pending_text = improved
-                        print(f"\n[AI IMPROVED] \"{pending_text}\"")
-                        print(f"Press {config['type_hotkey']} to type.")
+                        self.pending_text = improved
+                        print(f"\n[AI IMPROVED] \"{self.pending_text}\"")
+                        print(f"Press {self.config['type_hotkey']} to type.")
                 finally:
-                    is_processing = False
-            
+                    self.is_processing = False
             threading.Thread(target=run_improve).start()
         else:
              print("\nNo pending text to improve.")
 
-    print(f"Ready! Press {config['hotkey']} to toggle recording.")
-    
-    try:
-        with keyboard.GlobalHotKeys({
-            config['hotkey']: on_record_toggle,
-            config['type_hotkey']: on_type_confirm,
-            config['improve_hotkey']: on_improve_text
-        }) as h:
-            h.join()
-    except ValueError as e:
-        print(f"Invalid hotkey format. Please use pynput format (e.g., '<f8>', '<ctrl>+<alt>+h')")
-        print(f"Error details: {e}")
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Whisper Typing - Background Speech to Text")
+    parser.add_argument("--hotkey", help="Global hotkey to toggle recording")
+    parser.add_argument("--type-hotkey", help="Global hotkey to type")
+    parser.add_argument("--improve-hotkey", help="Global hotkey to improve text")
+    parser.add_argument("--model", help="Whisper model ID")
+    parser.add_argument("--language", help="Language code")
+    parser.add_argument("--api-key", help="Gemini API Key")
+    args = parser.parse_args()
 
-if __name__ == "__main__":
+    app = WhisperTypingApp()
+    app.load_configuration(args)
+    if not app.initialize_components():
+        return
+    app.start_listener()
+
+    # Interactive Loop
     try:
-        main()
+        while True:
+            cmd = input().strip().lower()
+            if cmd == '/q':
+                print("Exiting...")
+                app.stop()
+                break
+            elif cmd == '/r':
+                print("Reloading configuration...")
+                app.stop()
+                app.load_configuration(args)
+                if app.initialize_components():
+                    app.start_listener()
+            elif cmd:
+                print(f"Unknown command: {cmd}")
     except KeyboardInterrupt:
         print("\nExiting...")
+        app.stop()
+
+if __name__ == "__main__":
+    main()
