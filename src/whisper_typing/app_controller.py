@@ -261,26 +261,56 @@ class WhisperAppController:
     def on_type_confirm(self):
         if self.paused: return
 
+        # If already typing, signal to stop
+        if hasattr(self, "_is_typing") and self._is_typing:
+            self.log("Stopping typing simulation...")
+            if hasattr(self, "typing_stop_event"):
+                self.typing_stop_event.set()
+            return
+
         if self.pending_text:
             text_to_type = self.pending_text
-            self.pending_text = None
-            if self.on_preview_update:
-                self.on_preview_update("", None)
+            # Note: We no longer clear self.pending_text or preview here
             
-            def _async_typing():
-                self.log(f"Simulating human typing ({len(text_to_type)} chars)...")
-                if self.window_manager and self.target_window_handle:
-                    if not self.window_manager.focus_window(self.target_window_handle):
-                        self.log("Failed to restore focus.")
-                        return 
-                    time.sleep(0.1) 
+            if not hasattr(self, "typing_stop_event"):
+                self.typing_stop_event = threading.Event()
+            self.typing_stop_event.clear()
+            self._is_typing = True
+            
+            def _check_focus():
+                if not self.window_manager or not self.target_window_handle:
+                    return True # Can't check
+                    
+                # pygetwindow objects can be compared directly if they are the same handle
+                active = self.window_manager.get_active_window()
+                if active and hasattr(active, '_hWnd') and hasattr(self.target_window_handle, '_hWnd'):
+                    return active._hWnd == self.target_window_handle._hWnd
+                return active == self.target_window_handle
 
-                self.typer.type_text(text_to_type)
-                self.log("Typing finished.")
+            def _async_typing():
+                try:
+                    if self.window_manager and self.target_window_handle:
+                        if not self.window_manager.focus_window(self.target_window_handle):
+                            self.log("Failed to restore focus.")
+                            self._is_typing = False
+                            return 
+                        time.sleep(0.3) 
+
+                    self.typer.type_text(
+                        text_to_type, 
+                        stop_event=self.typing_stop_event,
+                        check_focus=_check_focus
+                    )
+                    
+                    if self.typing_stop_event.is_set():
+                        self.log("Typing stopped.")
+                    else:
+                        self.log("Typing finished.")
+                finally:
+                    self._is_typing = False
+                    self.set_status("Ready")
 
             threading.Thread(target=_async_typing, daemon=True).start()
-            self.log("Typed.")
-            self.set_status("Ready")
         else:
             self.log("No text to type.")
 

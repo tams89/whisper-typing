@@ -1,13 +1,15 @@
 from pynput.keyboard import Controller, Key
 import time
 import pyperclip
+import threading
+from typing import Optional, Callable
 
 class Typer:
     def __init__(self, wpm: int = 40):
         self.keyboard = Controller()
         self.wpm = wpm
 
-    def type_text(self, text: str):
+    def type_text(self, text: str, stop_event: Optional[threading.Event] = None, check_focus: Optional[Callable[[], bool]] = None):
         """Simulate human-like typing into the active window."""
         if not text:
             return
@@ -21,6 +23,15 @@ class Typer:
             import random
             
             for i, char in enumerate(text):
+                # Check for cancellation
+                if stop_event and stop_event.is_set():
+                    print("Typing cancelled via stop event.")
+                    return
+                
+                if check_focus and not check_focus():
+                    print("Typing stopped: window focus lost.")
+                    return
+
                 self.keyboard.type(char)
                 
                 # Base delay with jitter (70% - 130% of base)
@@ -41,5 +52,4 @@ class Typer:
                     
         except Exception as e:
             print(f"Error during simulated typing: {e}")
-            # Emergency fallback: just dump it (though this might fail too if keyboard is the issue)
-            self.keyboard.type(text)
+            # Emergency fallback removed to respect cancellation/focus rules

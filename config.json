@@ -10,5 +10,5 @@
     "gemini_model": "models/gemini-flash-lite-latest",
     "device": "cuda",
     "debug": false,
-    "typing_wpm": 90
+    "typing_wpm": 150
 }
