@@ -3,19 +3,20 @@ import time
 import pyperclip
 
 class Typer:
-    def __init__(self):
+    def __init__(self, wpm: int = 40):
         self.keyboard = Controller()
+        self.wpm = wpm
 
     def type_text(self, text: str):
         """Simulate human-like typing into the active window."""
         if not text:
             return
 
-        print(f"Typing (at ~40 WPM): {text[:50]}...")
+        print(f"Typing (at ~{self.wpm} WPM): {text[:50]}...")
         try:
-            # 40 WPM = 200 Characters Per Minute (assuming 5 chars per word)
-            # 60 seconds / 200 characters = 0.3 seconds per character
-            base_char_delay = 60.0 / (40.0 * 5.0) 
+            # WPM = Characters Per Minute (assuming 5 chars per word)
+            # 60 seconds / (WPM * 5) characters = seconds per character
+            base_char_delay = 60.0 / (float(self.wpm) * 5.0) 
             
             import random
             

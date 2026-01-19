@@ -24,7 +24,8 @@ DEFAULT_CONFIG = {
     "microphone_name": None,
     "gemini_model": None,
     "device": "cpu",
-    "debug": False
+    "debug": False,
+    "typing_wpm": 40
 }
 
 def load_config(config_path: str = "config.json") -> Dict[str, Any]:
@@ -162,7 +163,7 @@ class WhisperAppController:
             
             # Recreate recorder with specific device
             self.recorder = AudioRecorder(device_index=self.current_mic_index)
-            self.typer = Typer()
+            self.typer = Typer(wpm=self.config.get("typing_wpm", 40))
             self.improver = AIImprover(
                 api_key=self.config["gemini_api_key"], 
                 model_name=self.config.get("gemini_model") or "gemini-1.5-flash",
