@@ -171,6 +171,40 @@ class WhisperTypingApp:
             except ValueError:
                 print("Invalid input.")
 
+    def select_whisper_model(self):
+        """Interactive Whisper model selection."""
+        models = [
+            "openai/whisper-tiny",
+            "openai/whisper-base",
+            "openai/whisper-small",
+            "openai/whisper-medium",
+            "openai/whisper-large-v3",
+            "openai/whisper-large-v3-turbo",
+        ]
+        
+        print("\nAvailable Whisper Models:")
+        for i, m in enumerate(models):
+            print(f"{i}: {m}")
+            
+        print("\nEnter ID to select, or 'c' to cancel.")
+        while True:
+            try:
+                user_input = input("Select Model ID: ").strip()
+                if user_input.lower() == 'c':
+                    return None
+                
+                idx = int(user_input)
+                if 0 <= idx < len(models):
+                    selected = models[idx]
+                    print(f"Selected: {selected}")
+                    self.config["model"] = selected
+                    save_config(self.config)
+                    return selected
+                else:
+                    print("Invalid ID.")
+            except ValueError:
+                print("Invalid input.")
+
     def select_device(self):
         """Interactive device selection."""
         print("\nSelect Processing Device:")
@@ -421,6 +455,7 @@ def main() -> None:
                 print("\nConfiguration:")
                 print("m: Change Microphone")
                 print("g: Change Gemini Model")
+                print("w: Change Whisper Model")
                 print("d: Change Device")
                 print("c: Cancel")
                 choice = input("Select option: ").strip().lower()
@@ -438,6 +473,11 @@ def main() -> None:
                 elif choice == 'd':
                     app.stop()
                     app.select_device()
+                    if app.initialize_components():
+                        app.start_listener()
+                elif choice == 'w':
+                    app.stop()
+                    app.select_whisper_model()
                     if app.initialize_components():
                         app.start_listener()
                 elif choice == 'c':
