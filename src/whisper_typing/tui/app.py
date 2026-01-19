@@ -76,7 +76,7 @@ class WhisperTui(App):
         
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield Footer()
+        
 
         yield Container(
             Static(self.preview_text, id="preview_area"),
@@ -85,6 +85,8 @@ class WhisperTui(App):
             RichLog(id="log_area", markup=True, highlight=True),
             id="main_container"
         )
+
+        yield Footer()
 
     def on_mount(self) -> None:
         self.title = "Whisper Typing"
