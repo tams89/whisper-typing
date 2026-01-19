@@ -137,6 +137,9 @@ class ConfigurationScreen(Screen):
             
             Label("Gemini API Key:"),
             Input(value=config.get("gemini_api_key") or "", password=True, id="api_key_input"),
+
+            Label("Gemini Model:"),
+            Select(gemini_models, value=current_gemini_model, id="gemini_model_select"),
             
             Label("Record Hotkey:"),
             Input(value=config.get("hotkey"), id="hotkey_input"),
@@ -144,14 +147,12 @@ class ConfigurationScreen(Screen):
             Label("Type Hotkey:"),
             Input(value=config.get("type_hotkey"), id="type_hotkey_input"),
             
-            Label("Gemini Model:"),
-            Select(gemini_models, value=current_gemini_model, id="gemini_model_select"),
-            
-            Label("Debug Mode:"),
-            Checkbox(value=config.get("debug", False), id="debug_checkbox"),
-            
+                      
             Label("Typing Speed (WPM):"),
             Input(value=str(config.get("typing_wpm", 40)), id="typing_wpm_input"),
+
+            Label("Debug Mode:"),
+            Checkbox(value=config.get("debug", False), id="debug_checkbox"),
             
             Horizontal(
                 Button("Save", variant="primary", id="save_btn"),
