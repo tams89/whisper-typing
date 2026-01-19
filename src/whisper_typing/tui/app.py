@@ -34,6 +34,16 @@ class WhisperTui(App):
         margin: 1;
     }
     
+    #shortcuts_info {
+        text-align: center;
+        color: $text-muted;
+        background: $surface;
+        border-bottom: solid $accent;
+        padding-bottom: 0;
+        margin-bottom: 1;
+        width: 100%;
+    }
+
     #log_area {
         height: 1fr;
         border: solid $accent;
@@ -55,6 +65,7 @@ class WhisperTui(App):
 
     status_message = reactive("Starting...")
     preview_text = reactive("Ready to record...")
+    shortcuts_text = reactive("")
 
     def __init__(self, controller: WhisperAppController):
         super().__init__()
@@ -67,6 +78,7 @@ class WhisperTui(App):
         yield Container(
             Label("Preview:", classes="label"),
             Static(self.preview_text, id="preview_area"),
+            Label(self.shortcuts_text, id="shortcuts_info"), 
             Label("Logs:", classes="label"),
             Log(id="log_area"),
             id="main_container"
@@ -80,6 +92,8 @@ class WhisperTui(App):
         self.controller.on_log = self.write_log
         self.controller.on_status_change = self.update_status
         self.controller.on_preview_update = self.update_preview
+        
+        self.update_shortcuts_display() # Show immediately
         
         # Initialize Controller
         self.startup_controller()
@@ -97,6 +111,15 @@ class WhisperTui(App):
         else:
             self.update_status("Initialization Failed")
             self.write_log("Failed to initialize components. Check logs/config.")
+
+    def update_shortcuts_display(self):
+        cfg = self.controller.config
+        text = f"Global Keys: {cfg.get('hotkey', '?')} = Record | {cfg.get('type_hotkey', '?')} = Type | {cfg.get('improve_hotkey', '?')} = Improve"
+        self.shortcuts_text = text
+        try:
+            self.query_one("#shortcuts_info", Label).update(text)
+        except Exception:
+            pass
 
     def write_log(self, message: str) -> None:
         log_widget = self.query_one("#log_area", Log)
