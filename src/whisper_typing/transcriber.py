@@ -15,7 +15,7 @@ class Transcriber:
         self.pipe = pipeline(
             "automatic-speech-recognition",
             model=model_id,
-            torch_dtype=torch_dtype,
+            dtype=torch_dtype,
             device=device,
         )
 
@@ -32,7 +32,8 @@ class Transcriber:
             chunk_length_s=30,
             batch_size=8, # increased batch size for better GPU utilization
             generate_kwargs=generate_kwargs,
-            return_timestamps=True
+            return_timestamps=True,
+            ignore_warning=True
         )
         
         text = result["text"].strip()
