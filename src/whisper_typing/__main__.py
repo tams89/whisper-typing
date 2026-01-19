@@ -5,13 +5,12 @@ import sys
 import threading
 import time
 from typing import Any, Dict, Optional
-from dotenv import load_dotenv
 from pynput import keyboard
 from .audio_capture import AudioRecorder
 from .transcriber import Transcriber
 from .typer import Typer
 from .ai_improver import AIImprover
-from .window_manager import WindowManager 
+from .window_manager import WindowManager
 
 DEFAULT_CONFIG = {
     "hotkey": "<f8>",
@@ -39,20 +38,19 @@ def load_config(config_path: str = "config.json") -> Dict[str, Any]:
 def save_config(config: Dict[str, Any], config_path: str = "config.json"):
     """Save configuration to JSON file."""
     try:
-        # Don't save env var API key to file if we can avoid it, 
-        # but for simplicity we dump the current config state.
-        # Ideally we might exclude sensitive keys if they came from env.
-        # Here we just dump.
         with open(config_path, "w") as f:
             json.dump(config, f, indent=4)
         print(f"Configuration saved to {config_path}")
     except Exception as e:
         print(f"Error saving config: {e}")
 
+from .ai_improver import AIImprover
+from .window_manager import WindowManager # Should be imported if using it
+
+# ... (rest of imports)
+
 class WhisperTypingApp:
     def __init__(self):
-        load_dotenv() # Load env vars
-        
         self.config = {}
         self.args = None
         self.recorder = None
@@ -60,7 +58,7 @@ class WhisperTypingApp:
         self.typer = None
         self.improver = None
         self.listener = None
-        self.window_manager = WindowManager()
+        self.window_manager = WindowManager() # Initialize window manager
         self.target_window_handle = None
         self.is_processing = False
         self.pending_text = None
@@ -76,12 +74,7 @@ class WhisperTypingApp:
         file_config = load_config()
         self.config.update(file_config)
         
-        # Override with Environment Variables
-        env_key = os.getenv("GEMINI_API_KEY")
-        if env_key:
-            self.config["gemini_api_key"] = env_key
-
-        # Override with CLI args (Highest priority)
+        # Override with CLI args
         if args.hotkey: self.config["hotkey"] = args.hotkey
         if args.type_hotkey: self.config["type_hotkey"] = args.type_hotkey
         if args.improve_hotkey: self.config["improve_hotkey"] = args.improve_hotkey
@@ -185,7 +178,7 @@ class WhisperTypingApp:
             mic_index = self.select_microphone()
             if mic_index is None:
                 print("Using default system microphone.")
-                mic_index = None 
+                mic_index = None
 
         self.current_mic_index = mic_index
         mic_name = self.config.get("microphone_name", "Default")
@@ -339,8 +332,9 @@ class WhisperTypingApp:
             threading.Thread(target=run_improve).start()
         else:
              print("\nNo pending text to improve.")
-
+    
 def main() -> None:
+    # ... (arg checks) ...
     parser = argparse.ArgumentParser(description="Whisper Typing - Background Speech to Text")
     parser.add_argument("--hotkey", help="Global hotkey to toggle recording")
     parser.add_argument("--type-hotkey", help="Global hotkey to type")

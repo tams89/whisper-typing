@@ -8,9 +8,9 @@ A powerful, background speech-to-text application for Windows that runs locally.
     - **Record/Stop**: `F8` (default)
     - **Confirm Type**: `F9` (default)
     - **Improve Text**: `F10` (default) - Uses Gemini AI to fix grammar.
-- **Interactive Modes**: Type `/r` to reload, `/p` to pause, `/c` to configure (microphone, AI model), or `/q` to quit.
+- **Interactive Modes**: Type `/r` to reload, `/p` to pause, `/c` to change mic, or `/q` to quit.
 - **Preview Mode**: Transcribed text is shown in the console first. You decide when to paste it.
-- **Local Processing**: Transcription is processed locally. Data is only sent to the cloud if you use the "Improve Text" (AI) feature.
+- **Local Processing**: All audio is processed locally on your machine. No data is sent to the cloud.
 - **Smart Focus**: Automatically refocuses your target window before typing (uses `pygetwindow`).
 - **Clipboard Typing**: Uses Ctrl+V for fast, reliable text insertion (requires `pyperclip`).
 - **GPU Acceleration**: Supports NVIDIA GPUs for lightning-fast transcription (requires CUDA).
@@ -32,13 +32,7 @@ This project uses `uv` for dependency management.
     cd whispher-typing
     ```
 
-2.  **Configure API Key**:
-    Create a `.env` file in the project root:
-    ```env
-    GEMINI_API_KEY=your_google_ai_key
-    ```
-
-3.  **Install dependencies**:
+2.  **Install dependencies**:
     ```bash
     uv sync
     ```
@@ -88,9 +82,7 @@ Create a `config.json` file in the same directory:
     "improve_hotkey": "<f10>",
     "model": "openai/whisper-base",
     "language": null,
-    "gemini_model": "gemini-1.5-flash"
-}
-*Note: It is recommended to keep `GEMINI_API_KEY` in your `.env` file instead of `config.json`.*
+    "gemini_api_key": "YOUR_API_KEY_HERE"
 }
 ```
 

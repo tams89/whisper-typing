@@ -1,5 +1,5 @@
-import numpy as np
 import torch
+import numpy as np
 from transformers import pipeline
 
 
@@ -20,9 +20,9 @@ class Transcriber:
             device=device,
         )
 
-    def transcribe(self, audio_input) -> str:
-        """Transcribe audio (file path or numpy array) to text."""
-        input_type = "buffer" if hasattr(audio_input, 'shape') else audio_input
+    def transcribe(self, audio_input: "str | np.ndarray") -> str:
+        """Transcribe audio input (file path or numpy array) to text."""
+        input_type = "buffer" if issubclass(type(audio_input), (np.ndarray,)) else str(audio_input)
         print(f"Transcribing {input_type}...")
         
         generate_kwargs = {}
