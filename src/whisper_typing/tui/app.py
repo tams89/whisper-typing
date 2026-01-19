@@ -47,6 +47,7 @@ class WhisperTui(App):
 
     BINDINGS = [
         Binding("q", "quit", "Quit"),
+        Binding("p", "pause", "Pause"),
         Binding("c", "configure", "Configure"), # Placeholder for now
         Binding("r", "reload", "Reload Config"),
     ]
@@ -111,6 +112,8 @@ class WhisperTui(App):
                 status_widget.add_class("status_recording")
             elif "Processing" in status or "Loading" in status:
                 status_widget.add_class("status_processing")
+            elif "Paused" in status:
+                status_widget.add_class("status_processing") # Reuse warning color for pause
             else:
                 status_widget.add_class("status_ready")
         except Exception:
@@ -128,6 +131,9 @@ class WhisperTui(App):
         self.controller.stop()
         self.controller.load_configuration()
         self.startup_controller()
+
+    def action_pause(self):
+        self.controller.toggle_pause()
 
     def action_quit(self):
         self.controller.stop()
