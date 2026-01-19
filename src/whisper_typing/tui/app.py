@@ -1,12 +1,13 @@
 from textual import work
 from textual.app import App, ComposeResult
 from textual.containers import Container, Vertical, Horizontal
-from textual.widgets import Header, Footer, Static, Log, Label, Button
+from textual.widgets import Header, Footer, Static, RichLog, Label, Button
 from textual.binding import Binding
 from textual.reactive import reactive
 from textual.screen import Screen
 from rich.text import Text
 import difflib
+from datetime import datetime
 from typing import Optional
 
 from ..app_controller import WhisperAppController
@@ -81,7 +82,7 @@ class WhisperTui(App):
             Static(self.preview_text, id="preview_area"),
             Label(self.status_message, id="status_bar"),
             Label(self.shortcuts_text, id="shortcuts_info"), 
-            Log(id="log_area"),
+            RichLog(id="log_area", markup=True, highlight=True),
             id="main_container"
         )
 
@@ -122,8 +123,10 @@ class WhisperTui(App):
             pass
 
     def write_log(self, message: str) -> None:
-        log_widget = self.query_one("#log_area", Log)
-        log_widget.write_line(message)
+        log_widget = self.query_one("#log_area", RichLog)
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        # Using markup for colorized timestamp
+        log_widget.write(f"[bold blue][{timestamp}][/bold blue] {message}")
 
     def update_status(self, status: str) -> None:
         self.status_message = status
