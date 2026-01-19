@@ -10,6 +10,7 @@ from .audio_capture import AudioRecorder
 from .transcriber import Transcriber
 from .typer import Typer
 from .ai_improver import AIImprover
+from .window_manager import WindowManager
 
 DEFAULT_CONFIG = {
     "hotkey": "<f8>",
@@ -42,6 +43,11 @@ def save_config(config: Dict[str, Any], config_path: str = "config.json"):
     except Exception as e:
         print(f"Error saving config: {e}")
 
+from .ai_improver import AIImprover
+from .window_manager import WindowManager # Should be imported if using it
+
+# ... (rest of imports)
+
 class WhisperTypingApp:
     def __init__(self):
         self.config = {}
@@ -51,6 +57,8 @@ class WhisperTypingApp:
         self.typer = None
         self.improver = None
         self.listener = None
+        self.window_manager = WindowManager() # Initialize window manager
+        self.target_window_handle = None
         self.is_processing = False
         self.pending_text = None
         self.paused = False
@@ -202,6 +210,7 @@ class WhisperTypingApp:
             return
 
         if self.recorder.recording:
+            # Finishing recording
             print("\nStopping recording...")
             audio_data = self.recorder.stop()
             
@@ -224,6 +233,12 @@ class WhisperTypingApp:
             else:
                 print("No audio recorded (empty buffer).")
         else:
+            # Starting recording
+            # Capture active window
+            if self.window_manager:
+                self.target_window_handle = self.window_manager.get_active_window()
+                print(f"Captured target window handle: {self.target_window_handle}")
+            
             self.pending_text = None 
             self.recorder.start()
 
@@ -231,6 +246,15 @@ class WhisperTypingApp:
         if self.paused: return
 
         if self.pending_text:
+            # Restore focus if we have a handle
+            if self.window_manager and self.target_window_handle:
+                print(f"Restoring focus to window handle: {self.target_window_handle}")
+                if not self.window_manager.focus_window(self.target_window_handle):
+                    print("Failed to restore window focus. Aborting paste to prevent errors.")
+                    print(f"Pending text retained: \"{self.pending_text}\"")
+                    return # Abort
+                time.sleep(0.1) # Wait for focus switch
+
             self.typer.type_text(self.pending_text)
             self.pending_text = None
             print("\nText typed and cleared.")

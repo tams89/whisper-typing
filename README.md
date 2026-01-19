@@ -11,6 +11,8 @@ A powerful, background speech-to-text application for Windows that runs locally.
 - **Interactive Modes**: Type `/r` to reload, `/p` to pause, `/c` to change mic, or `/q` to quit.
 - **Preview Mode**: Transcribed text is shown in the console first. You decide when to paste it.
 - **Local Processing**: All audio is processed locally on your machine. No data is sent to the cloud.
+- **Smart Focus**: Automatically refocuses your target window before typing (uses `pygetwindow`).
+- **Clipboard Typing**: Uses Ctrl+V for fast, reliable text insertion (requires `pyperclip`).
 - **GPU Acceleration**: Supports NVIDIA GPUs for lightning-fast transcription (requires CUDA).
 - **Customizable**: Configure hotkeys, model size (e.g., `tiny`, `base`, `large`), and language via command-line arguments.
 
