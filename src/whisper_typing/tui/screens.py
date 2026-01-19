@@ -81,7 +81,7 @@ class ConfigurationScreen(Screen):
         start_value = None
         if current_mic:
             # Find index for name
-            for name, idx in devices:
+            for idx, name in devices:
                 if name == current_mic:
                     start_value = idx
                     break
