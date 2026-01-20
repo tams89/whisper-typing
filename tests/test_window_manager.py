@@ -32,8 +32,8 @@ def test_focus_window_failure() -> None:
     wm = WindowManager()
     mock_window = MagicMock()
     mock_window.isActive = False
-    
+
     # Simulate exception during activation
     mock_window.activate.side_effect = Exception("Focus error")
-    
+
     assert wm.focus_window(mock_window) is False
