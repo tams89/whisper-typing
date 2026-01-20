@@ -10,5 +10,5 @@
     "device": "cuda",
     "compute_type": "auto",
     "debug": false,
-    "typing_wpm": 150
+    "typing_wpm": 250
 }

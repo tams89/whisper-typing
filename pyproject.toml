@@ -1,6 +1,6 @@
 [project]
 name = "whisper-typing"
-version = "0.0.0"
+version = "1.0.0"
 description = "A powerful, background speech-to-text application for Windows that runs locally"
 readme = "README.md"
 requires-python = ">=3.13.7"
