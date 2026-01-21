@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal
-from textual.screen import Screen
+from textual.screen import ModalScreen, Screen
 from textual.widgets import (
     Button,
     Checkbox,
@@ -273,3 +273,80 @@ class ConfigurationScreen(Screen[bool]):
             self.dismiss(result=True)  # Return True to indicate save and reload
         else:
             self.dismiss(result=False)  # Return False to indicate no changes
+
+class ApiKeyPromptScreen(ModalScreen[str | None]):
+    """Screen for prompting the user for a Gemini API key on startup."""
+
+    CSS = """
+    ApiKeyPromptScreen {
+        align: center middle;
+        background: $background 50%;
+    }
+
+    #api_dialog {
+        padding: 1 2;
+        width: 60;
+        height: auto;
+        border: thick $primary;
+        background: $surface;
+    }
+
+    #api_title {
+        text-align: center;
+        text-style: bold;
+        margin-bottom: 1;
+        color: $primary;
+    }
+
+    #api_note {
+        margin-bottom: 1;
+        color: $text-muted;
+    }
+
+    #api_link {
+        color: $accent;
+        text-style: underline;
+        margin-bottom: 1;
+    }
+
+    #api_input {
+        margin-bottom: 1;
+    }
+
+    #api_buttons {
+        align: center middle;
+    }
+
+    Button {
+        margin: 0 1;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        """Compose the API key prompt screen layout."""
+        yield Container(
+            Label("Gemini API Key Required", id="api_title"),
+            Label(
+                "The AI text improver will not be active if an API key is not present.",
+                id="api_note",
+            ),
+            Label("Key: https://aistudio.google.com/app/apikey", id="api_link"),
+            Input(placeholder="Enter Gemini API Key...", password=True, id="api_input"),
+            Horizontal(
+                Button("Save", variant="primary", id="api_save_btn"),
+                Button("Skip", variant="error", id="api_skip_btn"),
+                id="api_buttons",
+            ),
+            id="api_dialog",
+        )
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button press events."""
+        if event.button.id == "api_save_btn":
+            api_key = self.query_one("#api_input", Input).value.strip()
+            if api_key:
+                self.dismiss(api_key)
+            else:
+                self.app.notify("Please enter a valid API key", severity="error")
+        elif event.button.id == "api_skip_btn":
+            self.dismiss(None)

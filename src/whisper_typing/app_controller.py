@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import sounddevice as sd
-from dotenv import set_key
+from dotenv import find_dotenv, set_key
 from pynput import keyboard
 
 from whisper_typing.ai_improver import AIImprover
@@ -210,21 +210,41 @@ class WhisperAppController:
 
         """
         try:
-            env_file = ".env"
-            # Ensure file exists
-            path = Path(env_file)
-            if not path.exists():
-                path.touch()
+            env_file = find_dotenv() or ".env"
+            path = Path(env_file).absolute()
+            self.log(f"Saving API key to {path}")
 
-            set_key(
-                env_path=env_file, key_to_set="GEMINI_API_KEY", value_to_set=api_key
-            )
+            # Read existing lines
+            lines = []
+            if path.exists():
+                with path.open("r", encoding="utf-8") as f:
+                    lines = f.readlines()
+
+            # Update or append
+            key_found = False
+            new_lines = []
+            for line in lines:
+                if line.strip().startswith("GEMINI_API_KEY="):
+                    new_lines.append(f"GEMINI_API_KEY={api_key}\n")
+                    key_found = True
+                else:
+                    new_lines.append(line)
+
+            if not key_found:
+                if new_lines and not new_lines[-1].endswith("\n"):
+                    new_lines[-1] += "\n"
+                new_lines.append(f"GEMINI_API_KEY={api_key}\n")
+
+            # Write back
+            with path.open("w", encoding="utf-8") as f:
+                f.writelines(new_lines)
+
             # Update current session environment variable and config
             os.environ["GEMINI_API_KEY"] = api_key
             self.config["gemini_api_key"] = api_key
-            self.log("API Key updated in .env")
+            self.log(f"API Key successfully saved to {path.name}")
         except Exception as e:  # noqa: BLE001
-            self.log(f"Error updating .env: {e}")
+            self.log(f"Error saving API key: {e}")
 
     def initialize_components(self) -> bool:
         """Initialize or re-initialize components.

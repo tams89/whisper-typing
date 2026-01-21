@@ -14,7 +14,7 @@ from textual.reactive import reactive
 from textual.widgets import Footer, Header, Label, RichLog, Static
 
 from whisper_typing.app_controller import WhisperAppController
-from whisper_typing.tui.screens import ConfigurationScreen
+from whisper_typing.tui.screens import ApiKeyPromptScreen, ConfigurationScreen
 
 
 class WhisperTui(App[None]):
@@ -111,6 +111,20 @@ class WhisperTui(App[None]):
         self.update_shortcuts_display()  # Show immediately
 
         # Initialize Controller
+        self.check_api_key_and_startup()
+
+    @work
+    async def check_api_key_and_startup(self) -> None:
+        """Check for API key and then start the controller."""
+        if not self.controller.config.get("gemini_api_key"):
+            screen = ApiKeyPromptScreen()
+            api_key = await self.push_screen_wait(screen)
+            if api_key:
+                self.controller.update_env_api_key(api_key)
+                self.write_log("API Key saved.")
+            else:
+                self.write_log("API Key skipped. AI Improvement disabled.")
+
         self.startup_controller()
 
     @work(exclusive=True, thread=True)
