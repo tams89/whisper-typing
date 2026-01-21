@@ -11,5 +11,6 @@
     "compute_type": "auto",
     "debug": false,
     "typing_wpm": 350,
-    "refocus_window": false
+    "refocus_window": true,
+    "model_cache_dir": null
 }

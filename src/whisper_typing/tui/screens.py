@@ -179,16 +179,22 @@ class ConfigurationScreen(Screen[bool]):
             ),
             Label("Gemini Model:"),
             Select(gemini_models, value=current_gemini_model, id="gemini_model_select"),
+            Label("Model Cache Dir:"),
+            Input(
+                value=config.get("model_cache_dir") or "",
+                placeholder="Default (HuggingFace cache)",
+                id="model_cache_input",
+            ),
             Label("Record Hotkey:"),
             Input(value=config.get("hotkey"), id="hotkey_input"),
             Label("Type Hotkey:"),
             Input(value=config.get("type_hotkey"), id="type_hotkey_input"),
             Label("Typing Speed (WPM):"),
             Input(value=str(config.get("typing_wpm", 40)), id="typing_wpm_input"),
-            Label("Debug Mode:"),
-            Checkbox(value=config.get("debug", False), id="debug_checkbox"),
             Label("Refocus Window:"),
             Checkbox(value=config.get("refocus_window", True), id="refocus_checkbox"),
+            Label("Debug Mode:"),
+            Checkbox(value=config.get("debug", False), id="debug_checkbox"),
             Horizontal(
                 Button("Save", variant="primary", id="save_btn"),
                 Button("Cancel", variant="error", id="cancel_btn"),
@@ -224,6 +230,7 @@ class ConfigurationScreen(Screen[bool]):
         refocus_checkbox = self.query_one("#refocus_checkbox", Checkbox)
         typing_wpm_input = self.query_one("#typing_wpm_input", Input)
         compute_type_select = self.query_one("#compute_type_select", Select)
+        model_cache_input = self.query_one("#model_cache_input", Input)
 
         try:
             typing_wpm = int(typing_wpm_input.value)
@@ -241,6 +248,7 @@ class ConfigurationScreen(Screen[bool]):
             "hotkey": hotkey_input.value,
             "type_hotkey": type_input.value,
             "typing_wpm": typing_wpm,
+            "model_cache_dir": model_cache_input.value or None,
         }
 
         # Handle Microphone Name
