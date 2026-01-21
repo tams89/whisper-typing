@@ -93,7 +93,7 @@ Other settings are stored in `config.json`:
   "refocus_window": false,
   "microphone_name": "Default System Mic",
   "gemini_model": "models/gemini-2.0-flash",
-  "model_cache_dir": null
+  "model_cache_dir": "./models/"
 }
 ```
 
