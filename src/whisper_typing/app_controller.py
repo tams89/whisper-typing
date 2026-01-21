@@ -35,6 +35,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "typing_wpm": 40,
     "gemini_api_key": None,
     "refocus_window": True,
+    "model_cache_dir": None,
 }
 
 
@@ -280,6 +281,7 @@ class WhisperAppController:
                     language=self.config["language"],
                     device=device,
                     compute_type=compute_type,
+                    download_root=self.config.get("model_cache_dir"),
                 )
                 self.current_model_id = self.config["model"]
                 self.current_language = self.config["language"]

@@ -22,6 +22,7 @@ class Transcriber:
         language: str | None = None,
         device: str = "cpu",
         compute_type: str = "auto",
+        download_root: str | None = None,
     ) -> None:
         """Initialize the Transcriber.
 
@@ -30,8 +31,10 @@ class Transcriber:
             language: Optional language code for transcription.
             device: Device to run the model on ('cpu' or 'cuda').
             compute_type: Quantization type for the model.
+            download_root: Directory to download models to.
 
         """
+        self.download_root = download_root
         self.model_name = WHISPER_NAME_MAP.get(model_id, model_id)
         self.language = language
 
@@ -53,7 +56,10 @@ class Transcriber:
             self.compute_type = compute_type
 
         self.model = WhisperModel(
-            self.model_name, device=self.device, compute_type=self.compute_type
+            self.model_name,
+            device=self.device,
+            compute_type=self.compute_type,
+            download_root=self.download_root,
         )
 
     def transcribe(self, audio_input: str | np.ndarray) -> str:

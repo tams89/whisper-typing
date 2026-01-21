@@ -86,3 +86,14 @@ def test_transcriber_cuda_fallback_to_cpu(
     # Should fallback to CPU
     assert transcriber.device == "cpu"
     assert transcriber.compute_type == "float16"
+
+
+@patch("whisper_typing.transcriber.WhisperModel")
+def test_transcriber_download_root(mock_whisper_model: MagicMock) -> None:
+    """Test Transcriber passes download_root to WhisperModel."""
+    test_root = "/custom/path/to/models"
+    Transcriber(download_root=test_root)
+
+    # Verify download_root was passed correctly
+    _, kwargs = mock_whisper_model.call_args
+    assert kwargs["download_root"] == test_root
