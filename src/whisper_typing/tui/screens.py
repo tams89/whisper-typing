@@ -274,6 +274,7 @@ class ConfigurationScreen(Screen[bool]):
         else:
             self.dismiss(result=False)  # Return False to indicate no changes
 
+
 class ApiKeyPromptScreen(ModalScreen[str | None]):
     """Screen for prompting the user for a Gemini API key on startup."""
 
