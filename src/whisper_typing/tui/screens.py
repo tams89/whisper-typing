@@ -188,9 +188,7 @@ class ConfigurationScreen(Screen[bool]):
             Label("Debug Mode:"),
             Checkbox(value=config.get("debug", False), id="debug_checkbox"),
             Label("Refocus Window:"),
-            Checkbox(
-                value=config.get("refocus_window", True), id="refocus_checkbox"
-            ),
+            Checkbox(value=config.get("refocus_window", True), id="refocus_checkbox"),
             Horizontal(
                 Button("Save", variant="primary", id="save_btn"),
                 Button("Cancel", variant="error", id="cancel_btn"),
