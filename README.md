@@ -2,7 +2,7 @@
 
 ![whiisper](https://github.com/user-attachments/assets/8bbd34ac-38d2-481e-9356-06e9f4498f0e)
 
-A powerful, human-like background speech-to-text application for Windows that runs locally. It listens for a global hotkey to record your voice, transcribes it in real-time using `faster-whisper`, and types the result into your active window with natural rhythm and pace.
+A powerful, human-like background speech-to-text application for Windows that runs locally. It listens for a global hotkey to record your voice, transcribes it in real-time using `faster-whisper` or `Ollama`, and types the result into your active window with natural rhythm and pace.
 
 ## Features
 
@@ -17,12 +17,14 @@ A powerful, human-like background speech-to-text application for Windows that ru
 - **Secure Storage**: Sensitive API keys (Gemini) are stored safely in a local `.env` file.
 - **TUI Management**: A sleek terminal interface for monitoring logs, previewing text, and configuring settings.
 - **Microphone Selection**: Choose your preferred input device directly from the configuration screen.
-- **Local Processing**: Audio is processed locally using `faster-whisper` (accelerated with CUDA if available).
+- **Multiple Transcription Backends**: Choose between `faster-whisper` (with CUDA acceleration) or `Ollama` for local model inference.
+- **Local Processing**: Audio is processed locally using `faster-whisper` (accelerated with CUDA if available) or via Ollama server.
 
 ## Prerequisites
 
 - **Python 3.13+**
-- **NVIDIA GPU (Recommended)**: Supports CUDA for lightning-fast transcription. Fallback to CPU is supported but slower.
+- **NVIDIA GPU (Recommended)**: Supports CUDA for lightning-fast transcription with `faster-whisper`. Fallback to CPU is supported but slower.
+- **Ollama (Optional)**: For using Ollama as the transcription backend. [Install Ollama](https://ollama.ai)
 
 ## Installation
 
@@ -101,9 +103,55 @@ Other settings are stored in `config.json`:
   "refocus_window": false,
   "microphone_name": "Default System Mic",
   "gemini_model": "models/gemini-2.0-flash",
-  "model_cache_dir": "./models/"
+  "model_cache_dir": "./models/",
+  "use_ollama": false,
+  "ollama_host": null
 }
 ```
+
+## Using Ollama
+
+Ollama provides an alternative transcription backend that can be easier to set up and use with local models.
+
+### Setup Ollama
+
+1. **Install Ollama**: Download and install from [ollama.ai](https://ollama.ai)
+
+2. **Pull a Whisper model**:
+   ```bash
+   ollama pull whisper
+   ```
+
+3. **Configure whisper-typing** to use Ollama by editing `config.json`:
+   ```json
+   {
+     "use_ollama": true,
+     "model": "whisper:latest"
+   }
+   ```
+
+### Ollama Configuration Options
+
+- **`use_ollama`**: Set to `true` to enable Ollama transcription backend
+- **`model`**: Ollama model name (e.g., `whisper:latest`, `whisper:medium`, `whisper:large`)
+- **`ollama_host`**: Optional custom Ollama server URL (default: `http://localhost:11434`)
+
+### Example: Using Ollama with Custom Host
+
+```json
+{
+  "use_ollama": true,
+  "model": "whisper:medium",
+  "ollama_host": "http://192.168.1.100:11434"
+}
+```
+
+### Benefits of Ollama
+
+- **Easy Installation**: Simple one-command model downloads
+- **Model Management**: Easy switching between different Whisper model sizes
+- **Remote Inference**: Can connect to Ollama running on another machine
+- **Cross-Platform**: Works consistently across Windows, Linux, and macOS
 
 ## Model Storage
 
@@ -122,6 +170,9 @@ You can change where models are stored in three ways:
 
 ## Troubleshooting
 
-- **Slow Transcription**: Check the logs to see if "cuda" or "cpu" is being used. You can change this in the Configuration screen.
+- **Slow Transcription**: 
+  - For `faster-whisper`: Check the logs to see if "cuda" or "cpu" is being used. You can change this in the Configuration screen.
+  - For `Ollama`: Ensure Ollama is running (`ollama serve`) and the model is downloaded.
 - **Hotkeys not working**: Ensure no other application is capturing the same keys.
 - **Microphone Issues**: Ensure the correct microphone is selected in the Configuration screen (`c`).
+- **Ollama Connection Error**: Verify Ollama is running and accessible at the configured `ollama_host` URL.
