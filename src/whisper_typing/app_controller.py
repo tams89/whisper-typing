@@ -13,6 +13,7 @@ from pynput import keyboard
 
 from whisper_typing.ai_improver import AIImprover
 from whisper_typing.audio_capture import AudioRecorder
+from whisper_typing.ollama_transcriber import OllamaTranscriber
 from whisper_typing.transcriber import Transcriber
 from whisper_typing.typer import Typer
 from whisper_typing.window_manager import WindowManager
@@ -36,6 +37,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "gemini_api_key": None,
     "refocus_window": True,
     "model_cache_dir": None,
+    "use_ollama": False,
+    "ollama_host": None,
 }
 
 
@@ -88,7 +91,7 @@ class WhisperAppController:
         """Initialize the WhisperAppController."""
         self.config: dict[str, Any] = {}
         self.recorder: AudioRecorder | None = None
-        self.transcriber: Transcriber | None = None
+        self.transcriber: Transcriber | OllamaTranscriber | None = None
         self.typer: Typer | None = None
         self.improver: AIImprover | None = None
         self.listener: keyboard.GlobalHotKeys | None = None
@@ -105,6 +108,8 @@ class WhisperAppController:
         self.current_mic_index: int | None = None
         self.current_device: str | None = None
         self.current_compute_type: str | None = None
+        self.current_use_ollama: bool | None = None
+        self.current_ollama_host: str | None = None
 
         self.stop_live_transcribe: threading.Event = threading.Event()
         self.live_transcribe_thread: threading.Thread | None = None
@@ -266,27 +271,49 @@ class WhisperAppController:
 
         try:
             # Reload Optimization: Check if model/language changed
+            use_ollama = self.config.get("use_ollama", False)
+            ollama_host = self.config.get("ollama_host")
+
             if (
                 not self.transcriber
                 or self.current_model_id != self.config["model"]
                 or self.current_language != self.config["language"]
-                or self.current_device != self.config.get("device", "cpu")
-                or self.current_compute_type != self.config.get("compute_type", "auto")
-            ):
-                self.log(f"Loading Transcriber ({self.config['model']})...")
-                device = self.config.get("device", "cpu")
-                compute_type = self.config.get("compute_type", "auto")
-                self.transcriber = Transcriber(
-                    model_id=self.config["model"],
-                    language=self.config["language"],
-                    device=device,
-                    compute_type=compute_type,
-                    download_root=self.config.get("model_cache_dir"),
+                or self.current_use_ollama != use_ollama
+                or self.current_ollama_host != ollama_host
+                or (
+                    not use_ollama
+                    and (
+                        self.current_device != self.config.get("device", "cpu")
+                        or self.current_compute_type
+                        != self.config.get("compute_type", "auto")
+                    )
                 )
+            ):
+                if use_ollama:
+                    self.log(f"Loading Ollama Transcriber ({self.config['model']})...")
+                    self.transcriber = OllamaTranscriber(
+                        model_id=self.config["model"],
+                        language=self.config["language"],
+                        ollama_host=ollama_host,
+                    )
+                else:
+                    self.log(f"Loading Transcriber ({self.config['model']})...")
+                    device = self.config.get("device", "cpu")
+                    compute_type = self.config.get("compute_type", "auto")
+                    self.transcriber = Transcriber(
+                        model_id=self.config["model"],
+                        language=self.config["language"],
+                        device=device,
+                        compute_type=compute_type,
+                        download_root=self.config.get("model_cache_dir"),
+                    )
+                    self.current_device = device
+                    self.current_compute_type = compute_type
+
                 self.current_model_id = self.config["model"]
                 self.current_language = self.config["language"]
-                self.current_device = device
-                self.current_compute_type = compute_type
+                self.current_use_ollama = use_ollama
+                self.current_ollama_host = ollama_host
 
             self.recorder = AudioRecorder(device_index=self.current_mic_index)
             self.typer = Typer(wpm=self.config.get("typing_wpm", 40))

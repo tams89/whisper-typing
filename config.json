@@ -12,5 +12,7 @@
     "debug": false,
     "typing_wpm": 350,
     "refocus_window": true,
-    "model_cache_dir": "./models/"
+    "model_cache_dir": "./models/",
+    "use_ollama": false,
+    "ollama_host": null
 }
