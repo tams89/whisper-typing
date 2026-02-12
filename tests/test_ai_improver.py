@@ -62,6 +62,28 @@ def test_improve_text_no_client() -> None:
     assert improver.improve_text("Original") == "Original"
 
 
+@patch("whisper_typing.ai_improver.ollama.Client")
+def test_improve_text_ollama_success(mock_client_cls: MagicMock) -> None:
+    """Test successful text improvement via Ollama."""
+    mock_client = mock_client_cls.return_value
+    mock_client.generate.return_value = {"response": "Ollama improved"}
+
+    improver = AIImprover(api_key=None, use_ollama=True, ollama_model="qwen2.5:32b")
+    result = improver.improve_text("Bad text")
+
+    assert result == "Ollama improved"
+    mock_client.generate.assert_called_once()
+
+
+@patch("whisper_typing.ai_improver.ollama.Client")
+def test_ollama_initialization_exception(mock_client_cls: MagicMock) -> None:
+    """Test Ollama initialization handles client creation exception."""
+    mock_client_cls.side_effect = Exception("Ollama error")
+    improver = AIImprover(api_key=None, use_ollama=True)
+    assert improver.client is None
+    assert improver.improve_text("Original") == "Original"
+
+
 @patch("google.genai.Client")
 def test_initialization_exception(mock_client_cls: MagicMock) -> None:
     """Test initialization handles client creation exception."""

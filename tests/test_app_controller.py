@@ -150,3 +150,17 @@ def test_on_improve_text(mock_dependencies: dict[str, Any]) -> None:  # noqa: AR
     with patch("threading.Thread") as mock_thread:
         controller.on_improve_text()
         mock_thread.assert_called_once()
+
+
+def test_on_improve_text_ollama(mock_dependencies: dict[str, Any]) -> None:  # noqa: ARG001
+    """Test AI improvement trigger with Ollama improver enabled."""
+    controller = WhisperAppController()
+    controller.config = DEFAULT_CONFIG.copy()
+    controller.config["use_ollama_improver"] = True
+    controller.initialize_components()
+
+    controller.pending_text = "Bad text"
+
+    with patch("threading.Thread") as mock_thread:
+        controller.on_improve_text()
+        mock_thread.assert_called_once()

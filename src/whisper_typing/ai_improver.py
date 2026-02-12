@@ -1,18 +1,22 @@
-"""AI text improvement using Gemini."""
+"""AI text improvement using Gemini or Ollama."""
 
 from collections.abc import Callable
 
+import ollama
 from google import genai
 from google.api_core import exceptions
 
 
 class AIImprover:
-    """Improves transcribed text using Google's Gemini AI."""
+    """Improves transcribed text using Gemini or an Ollama model."""
 
     def __init__(
         self,
         api_key: str | None,
         model_name: str = "gemini-1.5-flash",
+        use_ollama: bool = False,
+        ollama_model: str = "qwen2.5:32b",
+        ollama_host: str | None = None,
         *,
         debug: bool = False,
         logger: Callable[[str], None] | None = None,
@@ -22,14 +26,31 @@ class AIImprover:
         Args:
             api_key: Google Gemini API key.
             model_name: Name of the Gemini model to use.
+            use_ollama: Whether to use Ollama instead of Gemini.
+            ollama_model: Ollama model name for text improvement.
+            ollama_host: Optional Ollama server host URL.
             debug: Whether to enable debug logging.
             logger: Optional callback for logging messages.
 
         """
         self.api_key = api_key
         self.model_name = model_name
+        self.use_ollama = use_ollama
+        self.ollama_model = ollama_model
+        self.ollama_host = ollama_host
         self.debug = debug
         self.logger = logger
+
+        if self.use_ollama:
+            try:
+                if ollama_host:
+                    self.client = ollama.Client(host=ollama_host)
+                else:
+                    self.client = ollama.Client()
+            except Exception as e:  # noqa: BLE001
+                self.log(f"Error initializing Ollama client: {e}")
+                self.client = None
+            return
 
         if not api_key:
             self.client = None
@@ -87,33 +108,46 @@ class AIImprover:
 
         """
         if not self.client:
-            self.log("Gemini AI is not configured.")
+            self.log("AI improver is not configured.")
             return text
 
         if not text:
             return ""
 
-        # Remove 'models/' prefix if present
-        model_id = self.model_name
-        model_id = model_id.removeprefix("models/")
-
-        if self.debug:
-            self.log(f"DEBUG: Using Gemini model ID: {model_id}")
+        if not prompt_template:
+            prompt = (
+                "Refine and correct the following transcribed text. "
+                "Maintain the original meaning but improve grammar, "
+                "punctuation and clarity. "
+                "Output ONLY the refined text, nothing else.\n\n"
+                f"Text: {text}"
+            )
+        else:
+            # Use custom prompt, replacing {text} placeholder
+            prompt = prompt_template.replace("{text}", text)
 
         try:
-            if not prompt_template:
-                prompt = (
-                    "Refine and correct the following transcribed text. "
-                    "Maintain the original meaning but improve grammar, "
-                    "punctuation and clarity. "
-                    "Output ONLY the refined text, nothing else.\n\n"
-                    f"Text: {text}"
+            if self.use_ollama:
+                if self.debug:
+                    self.log(
+                        "DEBUG: Using Ollama model for improvement: "
+                        f"{self.ollama_model}"
+                    )
+                    self.log(f"DEBUG: Ollama raw request prompt:\n{prompt}")
+                response = self.client.generate(
+                    model=self.ollama_model,
+                    prompt=prompt,
                 )
-            else:
-                # Use custom prompt, replacing {text} placeholder
-                prompt = prompt_template.replace("{text}", text)
+                improved_text = response["response"].strip()
+                if self.debug:
+                    self.log(f"DEBUG: Ollama raw response:\n{improved_text}")
+                return improved_text
+
+            # Remove 'models/' prefix if present
+            model_id = self.model_name.removeprefix("models/")
 
             if self.debug:
+                self.log(f"DEBUG: Using Gemini model ID: {model_id}")
                 self.log(f"DEBUG: Gemini raw request prompt:\n{prompt}")
 
             response = self.client.models.generate_content(

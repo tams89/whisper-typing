@@ -13,6 +13,8 @@
     "typing_wpm": 350,
     "refocus_window": true,
     "model_cache_dir": "./models/",
-    "use_ollama": false,
+    "use_ollama": true,
+    "use_ollama_improver": true,
+    "ollama_improver_model": "qwen2.5:32b",
     "ollama_host": null
 }

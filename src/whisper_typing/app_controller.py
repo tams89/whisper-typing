@@ -35,6 +35,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "debug": False,
     "typing_wpm": 40,
     "gemini_api_key": None,
+    "use_ollama_improver": False,
+    "ollama_improver_model": "qwen2.5:32b",
     "refocus_window": True,
     "model_cache_dir": None,
     "use_ollama": False,
@@ -320,6 +322,10 @@ class WhisperAppController:
             self.improver = AIImprover(
                 api_key=self.config.get("gemini_api_key"),
                 model_name=self.config.get("gemini_model") or "gemini-1.5-flash",
+                use_ollama=self.config.get("use_ollama_improver", False),
+                ollama_model=self.config.get("ollama_improver_model")
+                or "qwen2.5:32b",
+                ollama_host=self.config.get("ollama_host"),
                 debug=self.config.get("debug", False),
                 logger=self.log,
             )
@@ -551,7 +557,8 @@ class WhisperAppController:
             return
 
         if self.pending_text:
-            if not self.config.get("gemini_api_key"):
+            use_ollama_improver = self.config.get("use_ollama_improver", False)
+            if not use_ollama_improver and not self.config.get("gemini_api_key"):
                 self.log("AI Improvement disabled: Gemini API Key missing.")
                 return
 
