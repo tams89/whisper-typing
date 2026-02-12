@@ -65,6 +65,7 @@ def test_ollama_transcribe_with_language(mock_client: MagicMock) -> None:
     transcriber = OllamaTranscriber(language="en")
 
     assert transcriber.language == "en"
+    mock_client.assert_called_once_with()
 
 
 @patch("whisper_typing.ollama_transcriber.ollama.Client")

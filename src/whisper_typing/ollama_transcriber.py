@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import ollama
@@ -58,7 +59,7 @@ class OllamaTranscriber:
             audio_bytes = buffer.getvalue()
         else:
             # Read file as bytes
-            with open(audio_input, "rb") as f:
+            with Path(audio_input).open("rb") as f:
                 audio_bytes = f.read()
 
         # Use Ollama's transcribe API
