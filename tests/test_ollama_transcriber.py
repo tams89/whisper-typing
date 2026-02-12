@@ -52,7 +52,7 @@ def test_ollama_transcribe_file_path(mock_client: MagicMock) -> None:
     transcriber = OllamaTranscriber()
 
     mock_file = mock_open(read_data=b"audio_data")
-    with patch("builtins.open", mock_file):
+    with patch("pathlib.Path.open", mock_file):
         result = transcriber.transcribe("test_audio.wav")
 
     assert result == "Test transcription"
