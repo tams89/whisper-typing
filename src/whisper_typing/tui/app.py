@@ -14,7 +14,11 @@ from textual.reactive import reactive
 from textual.widgets import Footer, Header, Label, RichLog, Static
 
 from whisper_typing.app_controller import WhisperAppController
-from whisper_typing.tui.screens import ApiKeyPromptScreen, ConfigurationScreen
+from whisper_typing.tui.screens import (
+    ApiKeyPromptScreen,
+    ConfigurationScreen,
+    OllamaConnectionScreen,
+)
 
 
 class WhisperTui(App[None]):
@@ -115,15 +119,44 @@ class WhisperTui(App[None]):
 
     @work
     async def check_api_key_and_startup(self) -> None:
-        """Check for API key and then start the controller."""
-        if not self.controller.config.get("gemini_api_key"):
-            screen = ApiKeyPromptScreen()
-            api_key = await self.push_screen_wait(screen)
-            if api_key:
-                self.controller.update_env_api_key(api_key)
-                self.write_log("API Key saved.")
-            else:
-                self.write_log("API Key skipped. AI Improvement disabled.")
+        """Check Ollama connection and AI improver configuration on startup."""
+        use_ollama_improver = self.controller.config.get("use_ollama_improver", False)
+
+        if use_ollama_improver:
+            # Show Ollama connection screen
+            screen = OllamaConnectionScreen(self.controller)
+            choice = await self.push_screen_wait(screen)
+
+            if choice == "gemini":
+                # Switch to Gemini improver
+                self.controller.config["use_ollama_improver"] = False
+                self.write_log("Switched to Gemini improver mode.")
+                # Show API key prompt
+                api_screen = ApiKeyPromptScreen()
+                api_key = await self.push_screen_wait(api_screen)
+                if api_key:
+                    self.controller.update_env_api_key(api_key)
+                    self.write_log("Gemini API Key saved.")
+                else:
+                    self.write_log(
+                        "Gemini API Key skipped. AI Improvement disabled."
+                    )
+            elif choice == "config":
+                # Open configuration screen
+                config_screen = ConfigurationScreen(self.controller)
+                await self.push_screen_wait(config_screen)
+            # If choice == "continue", just proceed
+            self.write_log("Ollama improver configured.")
+        else:
+            # Gemini mode
+            if not self.controller.config.get("gemini_api_key"):
+                screen = ApiKeyPromptScreen()
+                api_key = await self.push_screen_wait(screen)
+                if api_key:
+                    self.controller.update_env_api_key(api_key)
+                    self.write_log("Gemini API Key saved.")
+                else:
+                    self.write_log("Gemini API Key skipped. AI Improvement disabled.")
 
         self.startup_controller()
 
@@ -146,7 +179,8 @@ class WhisperTui(App[None]):
     def update_shortcuts_display(self) -> None:
         """Update the displayed global hotkeys."""
         cfg = self.controller.config
-        has_api_key = bool(cfg.get("gemini_api_key"))
+        use_ollama_improver = cfg.get("use_ollama_improver", False)
+        has_improver = use_ollama_improver or bool(cfg.get("gemini_api_key"))
 
         record_key = cfg.get("hotkey", "?")
         type_key = cfg.get("type_hotkey", "?")
@@ -154,8 +188,9 @@ class WhisperTui(App[None]):
 
         text = f"Global Keys: {record_key} = Start/Stop | {type_key} = Type | "
 
-        if has_api_key:
-            text += f"{improve_key} = Improve"
+        if has_improver:
+            improver_source = "Ollama" if use_ollama_improver else "Gemini"
+            text += f"{improve_key} = Improve ({improver_source})"
         else:
             text += f"[dim]{improve_key} = Improve (Disabled)[/dim]"
 

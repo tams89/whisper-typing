@@ -256,6 +256,27 @@ class WhisperAppController:
         except Exception as e:  # noqa: BLE001
             self.log(f"Error saving API key: {e}")
 
+    def check_ollama_connection(self) -> bool:
+        """Check if Ollama server is reachable.
+
+        Returns:
+            True if Ollama is reachable, False otherwise.
+
+        """
+        import ollama
+
+        ollama_host = self.config.get("ollama_host")
+        try:
+            if ollama_host:
+                client = ollama.Client(host=ollama_host)
+            else:
+                client = ollama.Client()
+            # Try to list models to verify connection
+            client.list()
+            return True
+        except Exception:  # noqa: BLE001
+            return False
+
     def initialize_components(self) -> bool:
         """Initialize or re-initialize components.
 

@@ -363,3 +363,104 @@ class ApiKeyPromptScreen(ModalScreen[str | None]):
                 self.app.notify("Please enter a valid API key", severity="error")
         elif event.button.id == "api_skip_btn":
             self.dismiss(None)
+
+
+class OllamaConnectionScreen(ModalScreen[str]):
+    """Screen for checking Ollama connection and selecting AI improver backend."""
+
+    CSS = """
+    OllamaConnectionScreen {
+        align: center middle;
+        background: $background 50%;
+    }
+
+    #conn_dialog {
+        padding: 1 2;
+        width: 70;
+        height: auto;
+        border: thick $primary;
+        background: $surface;
+    }
+
+    #conn_title {
+        text-align: center;
+        text-style: bold;
+        margin-bottom: 1;
+        color: $primary;
+    }
+
+    #conn_status {
+        margin-bottom: 1;
+        text-align: center;
+        color: $text-muted;
+    }
+
+    #conn_status.connected {
+        color: $success;
+        text-style: bold;
+    }
+
+    #conn_status.disconnected {
+        color: $error;
+        text-style: bold;
+    }
+
+    #conn_info {
+        margin-bottom: 1;
+        color: $text;
+    }
+
+    #conn_buttons {
+        align: center middle;
+        margin-top: 1;
+    }
+
+    Button {
+        margin: 0 1;
+    }
+    """
+
+    def __init__(self, controller: WhisperAppController) -> None:
+        """Initialize the OllamaConnectionScreen.
+
+        Args:
+            controller: The application controller instance.
+
+        """
+        super().__init__()
+        self.controller = controller
+        self.is_connected = False
+
+    def compose(self) -> ComposeResult:
+        """Compose the Ollama connection screen layout."""
+        self.is_connected = self.controller.check_ollama_connection()
+        
+        status_text = "✓ Connected" if self.is_connected else "✗ Disconnected"
+        status_class = "connected" if self.is_connected else "disconnected"
+        
+        ollama_host = self.controller.config.get("ollama_host") or "localhost:11434"
+        ollama_model = self.controller.config.get("ollama_improver_model", "qwen2.5:32b")
+        
+        info_text = f"Host: {ollama_host}\nModel: {ollama_model}"
+
+        yield Container(
+            Label("AI Text Improver Configuration", id="conn_title"),
+            Label(status_text, id="conn_status", classes=status_class),
+            Label(info_text, id="conn_info"),
+            Horizontal(
+                Button("Continue", variant="primary", id="conn_continue_btn"),
+                Button("Switch to Gemini", variant="warning", id="conn_gemini_btn"),
+                Button("Configure", variant="default", id="conn_config_btn"),
+                id="conn_buttons",
+            ),
+            id="conn_dialog",
+        )
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button press events."""
+        if event.button.id == "conn_continue_btn":
+            self.dismiss("continue")
+        elif event.button.id == "conn_gemini_btn":
+            self.dismiss("gemini")
+        elif event.button.id == "conn_config_btn":
+            self.dismiss("config")

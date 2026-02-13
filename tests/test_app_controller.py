@@ -3,7 +3,7 @@
 import threading
 from collections.abc import Generator
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -164,3 +164,44 @@ def test_on_improve_text_ollama(mock_dependencies: dict[str, Any]) -> None:  # n
     with patch("threading.Thread") as mock_thread:
         controller.on_improve_text()
         mock_thread.assert_called_once()
+
+
+@patch("ollama.Client")
+def test_check_ollama_connection_success(mock_client_cls: MagicMock) -> None:
+    """Test checking Ollama connection when successful."""
+    mock_client_instance = mock_client_cls.return_value
+    mock_client_instance.list.return_value = {"models": []}
+
+    controller = WhisperAppController()
+    controller.config = {"ollama_host": None}
+
+    is_connected = controller.check_ollama_connection()
+    assert is_connected is True
+    mock_client_cls.assert_called_once_with()
+    mock_client_instance.list.assert_called_once()
+
+
+@patch("ollama.Client")
+def test_check_ollama_connection_failure(mock_client_cls: MagicMock) -> None:
+    """Test checking Ollama connection when failed."""
+    mock_client_cls.side_effect = Exception("Connection refused")
+
+    controller = WhisperAppController()
+    controller.config = {"ollama_host": None}
+
+    is_connected = controller.check_ollama_connection()
+    assert is_connected is False
+
+
+@patch("ollama.Client")
+def test_check_ollama_connection_custom_host(mock_client_cls: MagicMock) -> None:
+    """Test checking Ollama connection with custom host."""
+    mock_client_instance = mock_client_cls.return_value
+    mock_client_instance.list.return_value = {"models": []}
+
+    controller = WhisperAppController()
+    controller.config = {"ollama_host": "http://remote:11434"}
+
+    is_connected = controller.check_ollama_connection()
+    assert is_connected is True
+    mock_client_cls.assert_called_once_with(host="http://remote:11434")
