@@ -16,5 +16,5 @@
     "use_ollama": true,
     "use_ollama_improver": true,
     "ollama_improver_model": "qwen2.5:32b",
-    "ollama_host": null
+    "ollama_host": "http://localhost:11434/"
 }
