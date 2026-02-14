@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
 
 class AudioService extends ChangeNotifier {
   final AudioRecorder _recorder = AudioRecorder();
@@ -36,7 +38,12 @@ class AudioService extends ChangeNotifier {
         throw Exception('Recording permission not granted');
       }
 
-      // Start recording
+      // Get temporary directory for recording
+      final tempDir = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      _recordingPath = '${tempDir.path}/recording_$timestamp.wav';
+
+      // Start recording to file
       await _recorder.start(
         const RecordConfig(
           encoder: AudioEncoder.wav,
@@ -44,11 +51,12 @@ class AudioService extends ChangeNotifier {
           numChannels: 1,
           bitRate: 128000,
         ),
+        path: _recordingPath!,
       );
 
       _isRecording = true;
       notifyListeners();
-      debugPrint('Recording started');
+      debugPrint('Recording started: $_recordingPath');
     } catch (e) {
       debugPrint('Failed to start recording: $e');
       _isRecording = false;
@@ -75,9 +83,20 @@ class AudioService extends ChangeNotifier {
       _recordingPath = path;
       debugPrint('Recording stopped: $path');
 
-      // TODO: Read audio file and return bytes
-      // For now, return mock data
-      return Uint8List(0);
+      // Read the audio file and return bytes
+      final file = File(path);
+      if (await file.exists()) {
+        final bytes = await file.readAsBytes();
+        debugPrint('Audio file read: ${bytes.length} bytes');
+        
+        // Clean up the file after reading
+        await file.delete();
+        
+        return bytes;
+      } else {
+        debugPrint('Recording file does not exist: $path');
+        return null;
+      }
     } catch (e) {
       debugPrint('Failed to stop recording: $e');
       _isRecording = false;
@@ -93,6 +112,14 @@ class AudioService extends ChangeNotifier {
       _recordingPath = null;
       notifyListeners();
       debugPrint('Recording cancelled');
+      
+      // Clean up file if it exists
+      if (_recordingPath != null) {
+        final file = File(_recordingPath!);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
     } catch (e) {
       debugPrint('Failed to cancel recording: $e');
     }

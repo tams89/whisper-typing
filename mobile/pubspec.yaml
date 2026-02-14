@@ -17,6 +17,7 @@ dependencies:
   # Audio recording
   record: ^5.0.4
   permission_handler: ^11.1.0
+  path_provider: ^2.1.1
   
   # State management
   provider: ^6.1.1

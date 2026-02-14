@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/grpc_service.dart';
 import '../services/audio_service.dart';
@@ -14,6 +15,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String _transcribedText = '';
   bool _isRecording = false;
+  bool _isTranscribing = false;
+  final List<String> _transcriptionHistory = [];
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +27,10 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Whisper Typing'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: _showHistory,
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
@@ -74,12 +81,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16.0),
                     child: SingleChildScrollView(
-                      child: Text(
-                        _transcribedText.isEmpty
-                            ? 'Press the button below to start recording...'
-                            : _transcribedText,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
+                      child: _isTranscribing
+                          ? const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  CircularProgressIndicator(),
+                                  SizedBox(height: 16),
+                                  Text('Transcribing...'),
+                                ],
+                              ),
+                            )
+                          : Text(
+                              _transcribedText.isEmpty
+                                  ? 'Press and hold the button below to start recording...'
+                                  : _transcribedText,
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
                     ),
                   ),
                 ),
@@ -135,6 +153,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       label: const Text('Copy'),
                     ),
                     ElevatedButton.icon(
+                      onPressed: _improveText(grpcService),
+                      icon: const Icon(Icons.auto_fix_high),
+                      label: const Text('Improve'),
+                    ),
+                    ElevatedButton.icon(
                       onPressed: _clearText,
                       icon: const Icon(Icons.delete),
                       label: const Text('Clear'),
@@ -159,33 +182,128 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _stopRecording(AudioService audioService, GrpcService grpcService) async {
     setState(() {
       _isRecording = false;
+      _isTranscribing = true;
     });
     
     final audioData = await audioService.stopRecording();
-    if (audioData != null) {
+    
+    if (audioData != null && audioData.isNotEmpty) {
       try {
         final transcription = await grpcService.transcribe(audioData);
         setState(() {
           _transcribedText = transcription;
+          _transcriptionHistory.insert(0, transcription);
+          _isTranscribing = false;
         });
       } catch (e) {
+        setState(() {
+          _isTranscribing = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Transcription failed: $e')),
+          );
+        }
+      }
+    } else {
+      setState(() {
+        _isTranscribing = false;
+      });
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Transcription failed: $e')),
+          const SnackBar(content: Text('No audio recorded')),
         );
       }
     }
   }
 
-  void _copyToClipboard() {
-    // TODO: Implement clipboard copy
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Copied to clipboard')),
-    );
+  Future<void> _copyToClipboard() async {
+    await Clipboard.setData(ClipboardData(text: _transcribedText));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Copied to clipboard')),
+      );
+    }
+  }
+
+  VoidCallback _improveText(GrpcService grpcService) {
+    return () async {
+      try {
+        setState(() {
+          _isTranscribing = true;
+        });
+        
+        final improved = await grpcService.improveText(_transcribedText);
+        
+        setState(() {
+          _transcribedText = improved;
+          _isTranscribing = false;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Text improved!')),
+          );
+        }
+      } catch (e) {
+        setState(() {
+          _isTranscribing = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Text improvement failed: $e')),
+          );
+        }
+      }
+    };
   }
 
   void _clearText() {
     setState(() {
       _transcribedText = '';
     });
+  }
+
+  void _showHistory() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Transcription History',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: _transcriptionHistory.isEmpty
+                  ? const Center(child: Text('No history yet'))
+                  : ListView.builder(
+                      itemCount: _transcriptionHistory.length,
+                      itemBuilder: (context, index) {
+                        return Card(
+                          child: ListTile(
+                            title: Text(
+                              _transcriptionHistory[index],
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            onTap: () {
+                              setState(() {
+                                _transcribedText = _transcriptionHistory[index];
+                              });
+                              Navigator.pop(context);
+                            },
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
