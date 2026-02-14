@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package whisper_typing;
+
+// Configuration service for backend settings management
+service ConfigService {
+  // Get current configuration
+  rpc GetConfig(GetConfigRequest) returns (ConfigResponse);
+  
+  // Update configuration
+  rpc UpdateConfig(UpdateConfigRequest) returns (ConfigResponse);
+  
+  // List available models
+  rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+  
+  // Test configuration (verify model loads, test transcription)
+  rpc TestConfig(TestConfigRequest) returns (TestConfigResponse);
+}
+
+// Request to get configuration
+message GetConfigRequest {
+  // Empty - returns current config
+}
+
+// Request to update configuration
+message UpdateConfigRequest {
+  Config config = 1;              // New configuration to apply
+}
+
+// Configuration structure
+message Config {
+  string model = 1;               // Model name (e.g., "openai/whisper-base.en")
+  string language = 2;            // Default language code
+  string device = 3;              // Device to use ("cpu", "cuda")
+  string compute_type = 4;        // Compute type ("auto", "int8", "float16")
+  bool use_ollama = 5;            // Whether to use Ollama backend
+  string ollama_host = 6;         // Ollama server URL
+  string model_cache_dir = 7;     // Directory for model cache
+  string gemini_model = 8;        // Gemini model name for text improvement
+}
+
+// Configuration response
+message ConfigResponse {
+  Config config = 1;              // Current configuration
+  string error = 2;               // Error message if operation failed
+}
+
+// Request to list available models
+message ListModelsRequest {
+  bool include_ollama = 1;        // Include Ollama models if available
+}
+
+// Available model information
+message ModelInfo {
+  string name = 1;                // Model name
+  string display_name = 2;        // Human-readable name
+  string size = 3;                // Model size (e.g., "base", "large-v3")
+  int64 size_bytes = 4;           // Model size in bytes
+  bool is_downloaded = 5;         // Whether model is cached locally
+  string backend = 6;             // Backend type ("faster-whisper", "ollama")
+}
+
+// List of available models
+message ListModelsResponse {
+  repeated ModelInfo models = 1;  // Available models
+  string error = 2;               // Error message if listing failed
+}
+
+// Request to test configuration
+message TestConfigRequest {
+  Config config = 1;              // Configuration to test
+  bytes test_audio = 2;           // Optional test audio data
+}
+
+// Test configuration response
+message TestConfigResponse {
+  bool success = 1;               // Whether test passed
+  string message = 2;             // Status message
+  string transcription = 3;       // Test transcription result (if audio provided)
+  string error = 4;               // Error message if test failed
+}
