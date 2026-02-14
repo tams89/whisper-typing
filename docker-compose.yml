@@ -1,0 +1,57 @@
+services:
+  whisper-typing-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: whisper-typing-backend
+    image: whisper-typing:latest
+    
+    # GPU support (requires NVIDIA Container Toolkit)
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    
+    # Configuration via environment variables
+    environment:
+      - MODEL=openai/whisper-base.en
+      - DEVICE=cuda
+      - LANGUAGE=en
+      - COMPUTE_TYPE=auto
+      - USE_OLLAMA=false
+      - OLLAMA_HOST=
+      - MODEL_CACHE_DIR=/app/models
+      - GEMINI_MODEL=models/gemini-2.0-flash
+      - GRPC_PORT=50051
+      - WEB_PORT=8080
+    
+    # Ports
+    ports:
+      - "50051:50051"  # gRPC API
+      - "8080:8080"    # Web admin panel
+    
+    # Volumes for persistence
+    volumes:
+      - ./models:/app/models        # Model cache
+      - ./config.json:/app/config.json  # Configuration
+      - ./logs:/app/logs            # Logs
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import grpc; channel = grpc.insecure_channel('localhost:50051'); channel.close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Resource limits (optional)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
