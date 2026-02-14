@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package whisper_typing;
+
+// Health check service for monitoring backend status
+service HealthService {
+  // Check service health
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+  
+  // Get service information
+  rpc GetInfo(InfoRequest) returns (InfoResponse);
+}
+
+// Health check request
+message HealthCheckRequest {
+  // Empty - just checks if service is alive
+}
+
+// Health check response
+message HealthCheckResponse {
+  enum Status {
+    UNKNOWN = 0;
+    HEALTHY = 1;
+    UNHEALTHY = 2;
+    DEGRADED = 3;
+  }
+  
+  Status status = 1;              // Overall health status
+  string message = 2;             // Status message
+  int64 timestamp_ms = 3;         // Server timestamp in milliseconds
+}
+
+// Service information request
+message InfoRequest {
+  // Empty - returns service info
+}
+
+// Service information response
+message InfoResponse {
+  string version = 1;             // Backend version
+  string whisper_backend = 2;     // Transcription backend ("faster-whisper", "ollama")
+  string device = 3;              // Device in use ("cpu", "cuda")
+  bool cuda_available = 4;        // Whether CUDA is available
+  string current_model = 5;       // Currently loaded model
+  int64 uptime_seconds = 6;       // Service uptime in seconds
+}

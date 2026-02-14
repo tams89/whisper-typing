@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package whisper_typing;
+
+// Transcription service for audio-to-text conversion
+service TranscriptionService {
+  // Stream audio chunks and receive transcription results
+  rpc StreamTranscribe(stream AudioChunk) returns (stream TranscriptionResponse);
+  
+  // Single audio file transcription
+  rpc Transcribe(AudioRequest) returns (TranscriptionResponse);
+  
+  // Improve text using AI (Gemini integration)
+  rpc ImproveText(ImproveTextRequest) returns (ImproveTextResponse);
+}
+
+// Audio chunk for streaming transcription
+message AudioChunk {
+  bytes audio_data = 1;           // Audio data (PCM, WAV, etc.)
+  int32 sample_rate = 2;          // Sample rate in Hz (e.g., 16000)
+  int32 channels = 3;             // Number of audio channels (1 = mono, 2 = stereo)
+  string encoding = 4;            // Audio encoding format (e.g., "pcm", "opus", "wav")
+  bool is_final = 5;              // Indicates last chunk in stream
+}
+
+// Complete audio request
+message AudioRequest {
+  bytes audio_data = 1;           // Complete audio file data
+  int32 sample_rate = 2;          // Sample rate in Hz
+  int32 channels = 3;             // Number of audio channels
+  string encoding = 4;            // Audio encoding format
+  string language = 5;            // Language code (e.g., "en", "es")
+}
+
+// Transcription response
+message TranscriptionResponse {
+  string text = 1;                // Transcribed text
+  bool is_partial = 2;            // True if this is a partial result
+  float confidence = 3;           // Confidence score (0.0 to 1.0)
+  int64 timestamp_ms = 4;         // Server timestamp in milliseconds
+  string error = 5;               // Error message if transcription failed
+}
+
+// Request to improve text using AI
+message ImproveTextRequest {
+  string text = 1;                // Original text to improve
+  string api_key = 2;             // Gemini API key
+}
+
+// Improved text response
+message ImproveTextResponse {
+  string improved_text = 1;       // AI-improved text
+  string error = 2;               // Error message if improvement failed
+}
