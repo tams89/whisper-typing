@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whisper-Typing Admin Panel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: white; border-radius: 12px; padding: 30px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+        h1 { color: #667eea; margin-bottom: 10px; }
+        h2 { color: #333; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #667eea; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: #555; font-weight: 600; }
+        input[type="text"], select { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s; }
+        input[type="text"]:focus, select:focus { outline: none; border-color: #667eea; }
+        input[type="checkbox"] { width: 20px; height: 20px; margin-right: 10px; cursor: pointer; }
+        .checkbox-label { display: flex; align-items: center; cursor: pointer; }
+        button { background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.3s, transform 0.1s; }
+        button:hover { background: #5568d3; }
+        button:active { transform: scale(0.98); }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .button-group { display: flex; gap: 10px; margin-top: 20px; }
+        .status { display: inline-block; padding: 6px 12px; border-radius: 4px; font-size: 14px; font-weight: 600; margin-left: 10px; }
+        .status.healthy { background: #10b981; color: white; }
+        .status.error { background: #ef4444; color: white; }
+        .alert { padding: 12px; border-radius: 6px; margin-bottom: 20px; }
+        .alert.success { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
+        .alert.error { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
+        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { font-weight: 600; color: #555; }
+        .info-value { color: #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>Whisper-Typing Backend</h1>
+            <p>Configuration & Management Panel</p>
+            <span class="status" id="statusBadge">Loading...</span>
+        </div>
+        <div class="card" id="alertContainer"></div>
+        <div class="card">
+            <h2>Configuration</h2>
+            <form id="configForm">
+                <div class="form-group">
+                    <label for="model">Whisper Model</label>
+                    <select id="model" name="model"><option value="">Loading...</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="language">Language</label>
+                    <input type="text" id="language" name="language" value="en">
+                </div>
+                <div class="form-group">
+                    <label for="device">Device</label>
+                    <select id="device" name="device">
+                        <option value="cuda">CUDA (GPU)</option>
+                        <option value="cpu">CPU</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="compute_type">Compute Type</label>
+                    <select id="compute_type" name="compute_type">
+                        <option value="auto">Auto</option>
+                        <option value="int8">INT8</option>
+                        <option value="float16">Float16</option>
+                        <option value="float32">Float32</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="use_ollama" name="use_ollama">
+                        <span>Use Ollama Backend</span>
+                    </label>
+                </div>
+                <div class="form-group" id="ollamaHostGroup" style="display: none;">
+                    <label for="ollama_host">Ollama Host URL</label>
+                    <input type="text" id="ollama_host" name="ollama_host" placeholder="http://localhost:11434">
+                </div>
+                <div class="form-group">
+                    <label for="model_cache_dir">Model Cache Directory</label>
+                    <input type="text" id="model_cache_dir" name="model_cache_dir" value="/app/models">
+                </div>
+                <div class="form-group">
+                    <label for="gemini_model">Gemini Model</label>
+                    <input type="text" id="gemini_model" name="gemini_model" value="models/gemini-2.0-flash">
+                </div>
+                <div class="button-group">
+                    <button type="submit">Save Configuration</button>
+                    <button type="button" id="testBtn">Test Configuration</button>
+                </div>
+            </form>
+        </div>
+        <div class="card">
+            <h2>Backend Information</h2>
+            <div id="backendInfo">
+                <div class="info-row">
+                    <span class="info-label">Status:</span>
+                    <span class="info-value" id="backendStatus">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const API_BASE = '';
+        async function loadConfig() {
+            try {
+                const response = await fetch(`${API_BASE}/api/config`);
+                const config = await response.json();
+                document.getElementById('model').value = config.model;
+                document.getElementById('language').value = config.language;
+                document.getElementById('device').value = config.device;
+                document.getElementById('compute_type').value = config.compute_type;
+                document.getElementById('use_ollama').checked = config.use_ollama;
+                document.getElementById('ollama_host').value = config.ollama_host || '';
+                document.getElementById('model_cache_dir').value = config.model_cache_dir;
+                document.getElementById('gemini_model').value = config.gemini_model;
+                toggleOllamaHost();
+            } catch (error) {
+                showAlert('Failed to load configuration: ' + error.message, 'error');
+            }
+        }
+        async function loadModels() {
+            try {
+                const response = await fetch(`${API_BASE}/api/models`);
+                const data = await response.json();
+                const modelSelect = document.getElementById('model');
+                modelSelect.innerHTML = '';
+                data.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.name;
+                    option.textContent = `${model.display_name} (${model.backend})`;
+                    modelSelect.appendChild(option);
+                });
+                await loadConfig();
+            } catch (error) {
+                showAlert('Failed to load models: ' + error.message, 'error');
+            }
+        }
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/health`);
+                const data = await response.json();
+                const badge = document.getElementById('statusBadge');
+                badge.textContent = data.status.toUpperCase();
+                badge.className = 'status ' + (data.status === 'healthy' ? 'healthy' : 'error');
+                document.getElementById('backendStatus').textContent = data.status;
+            } catch (error) {
+                const badge = document.getElementById('statusBadge');
+                badge.textContent = 'ERROR';
+                badge.className = 'status error';
+            }
+        }
+        function toggleOllamaHost() {
+            const useOllama = document.getElementById('use_ollama').checked;
+            const ollamaHostGroup = document.getElementById('ollamaHostGroup');
+            ollamaHostGroup.style.display = useOllama ? 'block' : 'none';
+        }
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            container.innerHTML = `<div class="alert ${type}">${message}</div>`;
+            setTimeout(() => { container.innerHTML = ''; }, 5000);
+        }
+        document.getElementById('configForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const config = {
+                model: formData.get('model'),
+                language: formData.get('language'),
+                device: formData.get('device'),
+                compute_type: formData.get('compute_type'),
+                use_ollama: document.getElementById('use_ollama').checked,
+                ollama_host: formData.get('ollama_host') || null,
+                model_cache_dir: formData.get('model_cache_dir'),
+                gemini_model: formData.get('gemini_model'),
+            };
+            try {
+                const response = await fetch(`${API_BASE}/api/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config),
+                });
+                if (response.ok) {
+                    showAlert('Configuration saved successfully!', 'success');
+                } else {
+                    showAlert('Failed to save configuration', 'error');
+                }
+            } catch (error) {
+                showAlert('Error saving configuration: ' + error.message, 'error');
+            }
+        });
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            const formData = new FormData(document.getElementById('configForm'));
+            const config = {
+                model: formData.get('model'),
+                language: formData.get('language'),
+                device: formData.get('device'),
+                compute_type: formData.get('compute_type'),
+                use_ollama: document.getElementById('use_ollama').checked,
+                ollama_host: formData.get('ollama_host') || null,
+                model_cache_dir: formData.get('model_cache_dir'),
+                gemini_model: formData.get('gemini_model'),
+            };
+            try {
+                const response = await fetch(`${API_BASE}/api/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ config }),
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('Configuration test passed!', 'success');
+                } else {
+                    showAlert('Configuration test failed: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error testing configuration: ' + error.message, 'error');
+            }
+        });
+        document.getElementById('use_ollama').addEventListener('change', toggleOllamaHost);
+        loadModels();
+        checkHealth();
+        setInterval(checkHealth, 30000);
+    </script>
+</body>
+</html>

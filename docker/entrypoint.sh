@@ -45,7 +45,19 @@ cat > /app/config.json << EOF
 }
 EOF
 
+# Start web admin panel in background
+echo "Starting web admin panel on port $WEB_PORT..."
+cd /app
+uv run python -m backend.web.app &
+WEB_PID=$!
+
 # Start gRPC server
 echo "Starting gRPC server on port $GRPC_PORT..."
-cd /app
-exec uv run python backend/server.py --port "$GRPC_PORT" --config config.json
+uv run python backend/server.py --port "$GRPC_PORT" --config config.json &
+GRPC_PID=$!
+
+# Wait for any process to exit
+wait -n
+
+# Exit with status of first process to exit
+exit $?
