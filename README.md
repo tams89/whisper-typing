@@ -2,23 +2,123 @@
 
 ![whiisper](https://github.com/user-attachments/assets/8bbd34ac-38d2-481e-9356-06e9f4498f0e)
 
-A powerful, human-like background speech-to-text application for Windows that runs locally. It listens for a global hotkey to record your voice, transcribes it in real-time using `faster-whisper` or `Ollama`, and types the result into your active window with natural rhythm and pace.
+A powerful, privacy-focused speech-to-text system that runs locally. Available as a **Windows desktop app** with global hotkeys or a **cross-platform mobile app** (Android) that connects to your self-hosted backend.
 
-## Features
+## 🎯 Choose Your Platform
 
-- **Real-Time Transcription**: See your words appear in the preview area instantly as you speak.
-- **Human-like Typing**: Simulates natural typing with variable speed, random jitter, and intelligent pauses after punctuation.
-- **Global Hotkeys**: Control recording and typing from any application.
+### 🖥️ Desktop (Windows)
+Background speech-to-text with global hotkeys. Records audio, transcribes locally, and types into any application with human-like rhythm.
+
+### 📱 Mobile (Android) 🆕
+Push-to-talk mobile app that connects to your self-hosted backend over Tailscale. Perfect for on-the-go transcription with complete privacy.
+
+---
+
+## Desktop App Features
+
+- **Real-Time Transcription**: See your words appear instantly as you speak
+- **Human-like Typing**: Simulates natural typing with variable speed and intelligent pauses
+- **Global Hotkeys**: Control from any application
   - **Record/Stop**: `F8` (default)
   - **Confirm Type**: `F9` (default)
-  - **Improve Text**: `F10` (default) - Uses Gemini AI to fix grammar and refine text.
-- **Window Refocus**: Automatically switches back to your target window after recording stops (configurable).
-- **Safe Focus**: Automatically stops typing if you switch away from the target window.
-- **Secure Storage**: Sensitive API keys (Gemini) are stored safely in a local `.env` file.
-- **TUI Management**: A sleek terminal interface for monitoring logs, previewing text, and configuring settings.
-- **Microphone Selection**: Choose your preferred input device directly from the configuration screen.
-- **Multiple Transcription Backends**: Choose between `faster-whisper` (with CUDA acceleration) or `Ollama` for local model inference.
-- **Local Processing**: Audio is processed locally using `faster-whisper` (accelerated with CUDA if available) or via Ollama server.
+  - **Improve Text**: `F10` (default) - Uses Gemini AI
+- **Window Refocus**: Automatically returns to your target window
+- **Safe Focus**: Stops typing if you switch windows
+- **TUI Management**: Terminal interface for configuration
+- **Multiple Backends**: `faster-whisper` (CUDA) or `Ollama`
+- **Local Processing**: Your audio never leaves your machine
+
+## Mobile App Features 🆕
+
+- **Push-to-Talk**: Hold button to record, release to transcribe
+- **Self-Hosted Backend**: Connect to your own server via Tailscale
+- **Real-Time Transcription**: Fast GPU-accelerated processing
+- **AI Text Improvement**: Enhance transcriptions with Gemini
+- **Transcription History**: Access recent transcriptions
+- **Copy to Clipboard**: Easy text sharing
+- **Privacy-First**: Audio processed on your private server
+- **Onboarding Wizard**: Easy first-time setup
+
+---
+
+## Quick Start
+
+### Desktop Installation
+
+**Prerequisites:**
+- Python 3.13+
+- NVIDIA GPU (recommended) or CPU
+- Ollama (optional)
+
+```bash
+git clone https://github.com/rpfilomeno/whispher-typing.git
+cd whispher-typing
+uv sync
+uv run whisper-typing
+```
+
+### Mobile + Backend Setup
+
+**1. Install Backend (Desktop PC):**
+```bash
+git clone https://github.com/rpfilomeno/whispher-typing.git
+cd whispher-typing
+docker-compose up -d
+```
+
+**2. Install Tailscale:**
+- Install on desktop PC and Android device
+- Get desktop PC's Tailscale IP: `tailscale ip -4`
+
+**3. Install Mobile App:**
+- Build from source: See `mobile/SETUP.md`
+- Or download pre-built APK from releases
+
+**4. Connect:**
+- Open mobile app
+- Enter Tailscale IP and port 50051
+- Start recording!
+
+## Documentation
+
+### Desktop App
+- [README.md](README.md) - This file
+- [Installation & Usage](README.md#installation) - Desktop setup
+
+### Mobile App + Backend
+- [mobile/SETUP.md](mobile/SETUP.md) - Flutter development setup
+- [mobile/USER_GUIDE.md](mobile/USER_GUIDE.md) - Complete user guide
+- [mobile/TESTING.md](mobile/TESTING.md) - Testing procedures
+- [DOCKER.md](DOCKER.md) - Backend deployment guide
+- [BACKEND_IMPLEMENTATION.md](BACKEND_IMPLEMENTATION.md) - Technical details
+
+## Architecture
+
+```
+┌─────────────────┐         ┌──────────────────┐
+│  Desktop App    │         │   Mobile App     │
+│  (Windows TUI)  │         │   (Android)      │
+│                 │         │                  │
+│  Global Hotkeys │         │  Push-to-Talk    │
+│  Local Whisper  │         │  Recording       │
+│  Types Directly │         │  Tailscale       │
+└─────────────────┘         └────────┬─────────┘
+                                     │
+                                     │ gRPC
+                                     │ (Encrypted)
+                                     ▼
+                            ┌────────────────┐
+                            │  Backend       │
+                            │  (Docker)      │
+                            │                │
+                            │  gRPC API      │
+                            │  Web Admin     │
+                            │  Whisper AI    │
+                            │  GPU/CUDA      │
+                            └────────────────┘
+```
+
+---
 
 ## Prerequisites
 
